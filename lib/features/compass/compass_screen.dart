@@ -12,13 +12,14 @@ import '../../widgets/app_card.dart';
 import '../../widgets/insight_explanation_sheet.dart';
 import '../../widgets/section_header.dart';
 import '../chat/chat_screen.dart';
+import '../journey/journey_screen.dart';
 import '../recommendations/recommendations_screen.dart';
 import '../recommendations/widgets/recommendation_card.dart';
 import 'life_events_screen.dart';
 import 'widgets/health_score_card.dart';
 
-/// Compass Dashboard (PRD Screen 4): health score, event highlights,
-/// AI insights feed and recommended actions.
+/// Compass Dashboard (PRD Screen 4): health score, journey entry, event
+/// highlights, AI insights feed and recommended actions.
 class CompassScreen extends ConsumerWidget {
   const CompassScreen({super.key});
 
@@ -35,7 +36,7 @@ class CompassScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Compass', style: TextStyle(fontWeight: FontWeight.w800)),
+        title: const Text('Compass'),
         actions: [
           IconButton(
             tooltip: 'Ask Compass',
@@ -50,6 +51,45 @@ class CompassScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(Insets.m),
         children: [
           HealthScoreCard(score: score),
+          const SizedBox(height: Insets.s + 4),
+          AppCard(
+            gradient: const LinearGradient(
+              colors: [AppColors.deepBlue, AppColors.blue],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const JourneyScreen()),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.16),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.route_rounded, size: 20, color: Colors.white),
+                ),
+                const SizedBox(width: Insets.m),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Your Journey',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: Colors.white)),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Milestones, badges and monthly highlights — never transactions.',
+                        style: TextStyle(fontSize: 12, height: 1.3, color: Colors.white.withOpacity(0.9)),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.arrow_forward_rounded, size: 18, color: Colors.white),
+              ],
+            ),
+          ),
           const SizedBox(height: Insets.s),
           SectionHeader(
             title: 'Event highlights',
