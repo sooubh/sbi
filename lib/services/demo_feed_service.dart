@@ -16,6 +16,7 @@ final healthScoreProvider = Provider<HealthScore>((ref) {
   return const HealthScore(
     total: 84,
     trendDelta: 5,
+    history: [72, 75, 74, 78, 79, 84],
     sections: [
       HealthScoreSection(name: 'Savings', score: 88),
       HealthScoreSection(name: 'Spending', score: 76),

@@ -12,12 +12,16 @@ class HealthScore {
   const HealthScore({
     required this.total,
     required this.trendDelta,
+    required this.history,
     required this.sections,
     required this.aiExplanation,
   });
 
   final int total; // 0–100
   final int trendDelta; // points vs last month
+
+  /// Monthly score history, oldest first (last value == current total).
+  final List<int> history;
   final List<HealthScoreSection> sections;
 
   /// Plain-language explanation of the score (explainability requirement).
