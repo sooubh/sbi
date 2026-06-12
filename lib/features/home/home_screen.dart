@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/utils/greeting.dart';
-import '../../services/demo_catalog.dart';
 import '../../services/demo_data_service.dart';
+import '../../services/persona.dart';
 import '../../widgets/section_header.dart';
 import '../shell/main_shell.dart';
 import 'widgets/account_summary_card.dart';
@@ -21,6 +21,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final goals = ref.watch(demoGoalsProvider);
+    final persona = ref.watch(personaProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -28,6 +29,7 @@ class HomeScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(Insets.m),
           children: [
             _GreetingHeader(
+              persona: persona,
               onBellTap: () => ref.read(shellIndexProvider.notifier).state =
                   ShellTab.timeline.index,
             ),
@@ -57,19 +59,20 @@ class HomeScreen extends ConsumerWidget {
 }
 
 class _GreetingHeader extends StatelessWidget {
-  const _GreetingHeader({required this.onBellTap});
+  const _GreetingHeader({required this.persona, required this.onBellTap});
 
+  final DemoPersona persona;
   final VoidCallback onBellTap;
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        const CircleAvatar(
+        CircleAvatar(
           radius: 22,
           backgroundColor: AppColors.lightBlue,
-          child: Text(DemoProfile.initials,
-              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.deepBlue)),
+          child: Text(persona.initials,
+              style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.deepBlue)),
         ),
         const SizedBox(width: Insets.m),
         Expanded(
@@ -78,8 +81,8 @@ class _GreetingHeader extends StatelessWidget {
             children: [
               Text(greetingForNow(),
                   style: const TextStyle(fontSize: 13, color: AppColors.slate)),
-              const Text(DemoProfile.firstName,
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.ink)),
+              Text(persona.firstName,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.ink)),
             ],
           ),
         ),

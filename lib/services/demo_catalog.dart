@@ -4,14 +4,6 @@ import '../models/life_event.dart';
 import '../models/recommendation.dart';
 import '../models/timeline_entry.dart';
 
-/// Demo identity shown across the app — single source of truth.
-abstract final class DemoProfile {
-  static const fullName = 'Aarav Rao';
-  static const firstName = 'Aarav';
-  static const initials = 'AR';
-  static const persona = 'Demo profile — young professional';
-}
-
 /// Single source of truth for demo scenarios (PRD section 12). Used to
 /// seed Firestore and as the offline fallback for every provider.
 abstract final class DemoCatalog {

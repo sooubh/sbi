@@ -5,11 +5,85 @@ import '../models/goal.dart';
 import '../models/insight.dart';
 import 'demo_catalog.dart';
 import 'firebase/firestore_repository.dart';
+import 'persona.dart';
 import 'user_settings.dart';
 
+/// Persona-specific goal sets (PRD section 12 demo user profiles).
+List<Goal> goalsForPersona(DemoPersona persona) => switch (persona) {
+      DemoPersona.student => const [
+        Goal(
+          id: 's1',
+          name: 'Laptop fund',
+          category: 'education',
+          progressPercent: 38,
+          aiNudge: 'Saving a little from each allowance keeps this on pace for semester end.',
+        ),
+        Goal(
+          id: 's2',
+          name: 'Exam fees buffer',
+          category: 'education',
+          progressPercent: 55,
+          aiNudge: 'More than halfway there — one steady month reaches the next milestone.',
+        ),
+        Goal(
+          id: 's3',
+          name: 'Trip with friends',
+          category: 'travel',
+          progressPercent: 22,
+          aiNudge: 'A small weekly top-up would build early momentum.',
+        ),
+      ],
+      DemoPersona.salaried => const [
+        Goal(
+          id: 'e1',
+          name: 'Emergency fund',
+          category: 'emergency',
+          progressPercent: 64,
+          aiNudge: 'Consistent salary-day transfers are working — keep the routine.',
+        ),
+        Goal(
+          id: 'e2',
+          name: 'Car upgrade',
+          category: 'vehicle',
+          progressPercent: 30,
+          aiNudge: 'Pace is steady; an annual-bonus top-up would jump a milestone.',
+        ),
+        Goal(
+          id: 'e3',
+          name: 'Parents support fund',
+          category: 'family',
+          progressPercent: 48,
+          aiNudge: 'Nearly halfway — a small auto-save keeps this stress-free.',
+        ),
+      ],
+      DemoPersona.youngProfessional => DemoCatalog.goals,
+      DemoPersona.family => const [
+        Goal(
+          id: 'f1',
+          name: "Children's education",
+          category: 'education',
+          progressPercent: 58,
+          aiNudge: 'On track — review the pace each school term.',
+        ),
+        Goal(
+          id: 'f2',
+          name: 'Family emergency fund',
+          category: 'emergency',
+          progressPercent: 71,
+          aiNudge: 'Strong buffer building — the 75% milestone is close.',
+        ),
+        Goal(
+          id: 'f3',
+          name: 'Family vacation',
+          category: 'travel',
+          progressPercent: 26,
+          aiNudge: 'A monthly family top-up would keep the holiday on schedule.',
+        ),
+      ],
+    };
+
 /// The hero insight adapts its depth to the chosen privacy level and the
-/// insight-detail toggle (Journey 4). Phase 4 replaces the static text
-/// with Gemini output fetched from Firestore.
+/// insight-detail toggle (Journey 4).
 final heroInsightProvider = Provider<Insight>((ref) {
   final settings = ref.watch(userSettingsProvider);
   final level =
@@ -56,19 +130,20 @@ final heroInsightProvider = Provider<Insight>((ref) {
   }
 });
 
-/// Goals: starts with the demo catalog, hydrates from Firestore when
-/// available, and persists new goals.
+/// Goals: persona-aware, hydrates from Firestore for the default persona
+/// (whose data is seeded), and persists new goals.
 class GoalsNotifier extends Notifier<List<Goal>> {
   @override
   List<Goal> build() {
+    final persona = ref.watch(personaProvider);
     final repo = ref.watch(firestoreRepositoryProvider);
-    if (repo != null) {
+    if (repo != null && persona == DemoPersona.youngProfessional) {
       Future(() async {
         final goals = await repo.fetchGoals();
         if (goals.isNotEmpty) state = goals;
       });
     }
-    return DemoCatalog.goals;
+    return goalsForPersona(persona);
   }
 
   void addGoal({required String name, required String category}) {

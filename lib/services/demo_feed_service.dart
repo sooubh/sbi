@@ -79,6 +79,9 @@ class InsightsFeedNotifier extends Notifier<List<Insight>> {
       ),
     ];
   }
+
+  /// Prepends a newly generated insight (Demo Console / function parity).
+  void addInsight(Insight insight) => state = [insight, ...state];
 }
 
 final insightsFeedProvider =
@@ -144,6 +147,9 @@ class TimelineNotifier extends Notifier<List<TimelineEntry>> {
     }
     return DemoCatalog.timeline(DateTime.now());
   }
+
+  /// Prepends a new AI activity entry (Demo Console / function parity).
+  void addEntry(TimelineEntry entry) => state = [entry, ...state];
 }
 
 final timelineProvider =
