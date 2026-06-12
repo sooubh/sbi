@@ -28,4 +28,25 @@ class Recommendation {
       status: status ?? this.status,
     );
   }
+
+  /// PRD `recommendations` document shape.
+  Map<String, dynamic> toMap(String userId) => {
+        'userId': userId,
+        'title': title,
+        'reason': reason,
+        'actionLabel': actionLabel,
+        'status': status.name,
+      };
+
+  factory Recommendation.fromMap(String id, Map<String, dynamic> map) {
+    final statusName = map['status'] as String? ?? 'active';
+    return Recommendation(
+      id: id,
+      title: map['title'] as String? ?? '',
+      reason: map['reason'] as String? ?? '',
+      actionLabel: map['actionLabel'] as String? ?? 'View',
+      status: RecommendationStatus.values
+          .firstWhere((s) => s.name == statusName, orElse: () => RecommendationStatus.active),
+    );
+  }
 }

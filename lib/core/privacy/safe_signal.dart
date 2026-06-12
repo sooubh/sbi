@@ -22,4 +22,12 @@ class SafeSignal {
 
   final SignalSeverity severity;
   final DateTime timestamp;
+
+  /// PRD `financialSignals` document shape (userId added by the repository).
+  Map<String, dynamic> toMap() => {
+        'signalType': type,
+        'category': category,
+        'severity': severity.name,
+        'timestamp': timestamp,
+      };
 }

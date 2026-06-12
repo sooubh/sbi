@@ -3,15 +3,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/privacy/privacy_level.dart';
 import '../models/goal.dart';
 import '../models/insight.dart';
+import 'demo_catalog.dart';
+import 'firebase/firestore_repository.dart';
 import 'user_settings.dart';
 
-/// Demo data layer (PRD section 12). Replaced by Firestore in Phase 3 —
-/// providers keep the same shape so screens won't change.
-
-/// The hero insight adapts its depth to the chosen privacy level,
-/// demonstrating Journey 4 (privacy settings change AI response depth).
+/// The hero insight adapts its depth to the chosen privacy level and the
+/// insight-detail toggle (Journey 4). Phase 4 replaces the static text
+/// with Gemini output fetched from Firestore.
 final heroInsightProvider = Provider<Insight>((ref) {
-  final level = ref.watch(userSettingsProvider).privacyLevel;
+  final settings = ref.watch(userSettingsProvider);
+  final level =
+      settings.detailedInsights ? settings.privacyLevel : PrivacyLevel.minimal;
   switch (level) {
     case PrivacyLevel.minimal:
       return const Insight(
@@ -54,45 +56,31 @@ final heroInsightProvider = Provider<Insight>((ref) {
   }
 });
 
-/// Goals as a Notifier so the Goal Coach (PRD Feature 4) can add goals
-/// without changing any consumer widgets.
+/// Goals: starts with the demo catalog, hydrates from Firestore when
+/// available, and persists new goals.
 class GoalsNotifier extends Notifier<List<Goal>> {
   @override
-  List<Goal> build() => const [
-        Goal(
-          id: 'g1',
-          name: 'Emergency fund',
-          category: 'emergency',
-          progressPercent: 72,
-          aiNudge: 'You are ahead of pace. One more steady month reaches the 75% milestone.',
-        ),
-        Goal(
-          id: 'g2',
-          name: 'Goa trip fund',
-          category: 'travel',
-          progressPercent: 45,
-          aiNudge: 'Progress slowed slightly. A small weekly top-up keeps the trip on schedule.',
-        ),
-        Goal(
-          id: 'g3',
-          name: 'New bike',
-          category: 'vehicle',
-          progressPercent: 18,
-          aiNudge: 'A recurring auto-save would build early momentum for this goal.',
-        ),
-      ];
+  List<Goal> build() {
+    final repo = ref.watch(firestoreRepositoryProvider);
+    if (repo != null) {
+      Future(() async {
+        final goals = await repo.fetchGoals();
+        if (goals.isNotEmpty) state = goals;
+      });
+    }
+    return DemoCatalog.goals;
+  }
 
   void addGoal({required String name, required String category}) {
-    state = [
-      ...state,
-      Goal(
-        id: 'g-${DateTime.now().millisecondsSinceEpoch}',
-        name: name,
-        category: category,
-        progressPercent: 0,
-        aiNudge: 'New goal created. Set a recurring auto-save to build momentum.',
-      ),
-    ];
+    final goal = Goal(
+      id: 'g-${DateTime.now().millisecondsSinceEpoch}',
+      name: name,
+      category: category,
+      progressPercent: 0,
+      aiNudge: 'New goal created. Set a recurring auto-save to build momentum.',
+    );
+    state = [...state, goal];
+    ref.read(firestoreRepositoryProvider)?.addGoal(goal).ignore();
   }
 }
 

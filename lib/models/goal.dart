@@ -36,4 +36,23 @@ class Goal {
       aiNudge: aiNudge ?? this.aiNudge,
     );
   }
+
+  /// PRD `goals` document shape.
+  Map<String, dynamic> toMap(String userId) => {
+        'userId': userId,
+        'goalName': name,
+        'category': category,
+        'progressPercent': progressPercent,
+        'status': status,
+        if (aiNudge != null) 'aiNudge': aiNudge,
+      };
+
+  factory Goal.fromMap(String id, Map<String, dynamic> map) => Goal(
+        id: id,
+        name: map['goalName'] as String? ?? 'Goal',
+        category: map['category'] as String? ?? 'emergency',
+        progressPercent: (map['progressPercent'] as num?)?.toInt() ?? 0,
+        status: map['status'] as String? ?? 'active',
+        aiNudge: map['aiNudge'] as String?,
+      );
 }
