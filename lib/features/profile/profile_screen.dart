@@ -2,15 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_constants.dart';
+import '../../core/privacy/privacy_level.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/firebase/firebase_bootstrap.dart';
 import '../../services/persona.dart';
+import '../../services/user_settings.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/compass_note.dart';
 import '../demo_console/demo_console_screen.dart';
 import 'privacy_center_screen.dart';
 
-/// Profile: persona-aware account header, backend status and entry points
-/// to the Privacy Control Center and Demo Console.
+/// Profile: persona-aware account header, ambient AI note, backend status
+/// and entry points to the Privacy Control Center and Demo Console.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -19,6 +22,7 @@ class ProfileScreen extends ConsumerWidget {
     final firebaseAvailable = ref.watch(firebaseAvailableProvider);
     final userId = ref.watch(currentUserIdProvider);
     final persona = ref.watch(personaProvider);
+    final settings = ref.watch(userSettingsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Profile')),
@@ -48,6 +52,14 @@ class ProfileScreen extends ConsumerWidget {
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: Insets.s + 4),
+          CompassNote(
+            text:
+                'AI depth is set to ${settings.privacyLevel.label} — insights stay ${settings.privacyLevel == PrivacyLevel.minimal ? 'generic' : 'category-level'}.',
+            reason:
+                'Compass adapts every insight to your Privacy Control Center choices. '
+                'No raw financial data is ever read at any level.',
           ),
           const SizedBox(height: Insets.s + 4),
           AppCard(

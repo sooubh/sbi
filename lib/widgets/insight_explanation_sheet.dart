@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
 import '../models/insight.dart';
+import 'confidence_indicator.dart';
 
-/// Shared explainable-AI bottom sheet: "why you see this" + suggested
-/// action. Used by every insight surface in the app.
+/// Shared explainable-AI bottom sheet: reason, signal source, confidence
+/// and suggested action. Used by every insight surface in the app.
 Future<void> showInsightExplanation(BuildContext context, Insight insight) {
   return showModalBottomSheet<void>(
     context: context,
@@ -28,6 +29,25 @@ Future<void> showInsightExplanation(BuildContext context, Insight insight) {
           ),
           const SizedBox(height: Insets.m),
           Text(insight.reason, style: const TextStyle(height: 1.5, color: AppColors.slate)),
+          const SizedBox(height: Insets.s + 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(Corners.chip),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.sensors_rounded, size: 13, color: AppColors.slate),
+                const SizedBox(width: 6),
+                Text('signal: ${insight.signalType}',
+                    style: const TextStyle(fontFamily: 'monospace', fontSize: 11, color: AppColors.slate)),
+              ],
+            ),
+          ),
+          const SizedBox(height: Insets.m),
+          ConfidenceIndicator(confidence: insight.confidence),
           const SizedBox(height: Insets.m),
           const Text('Suggested action',
               style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink)),

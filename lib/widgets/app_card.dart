@@ -3,8 +3,9 @@ import 'package:flutter/material.dart';
 import '../core/constants/app_constants.dart';
 import '../core/theme/app_colors.dart';
 
-/// The standard soft, rounded card used across every screen.
-class AppCard extends StatelessWidget {
+/// The standard soft, rounded card used across every screen. Tappable
+/// cards get a subtle press-scale micro-interaction.
+class AppCard extends StatefulWidget {
   const AppCard({
     super.key,
     required this.child,
@@ -21,23 +22,45 @@ class AppCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
+  State<AppCard> createState() => _AppCardState();
+}
+
+class _AppCardState extends State<AppCard> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (widget.onTap == null || _pressed == value) return;
+    setState(() => _pressed = value);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(Corners.card);
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: radius,
-        child: Ink(
-          decoration: BoxDecoration(
-            color: gradient == null ? color : null,
-            gradient: gradient,
+    return Listener(
+      onPointerDown: (_) => _setPressed(true),
+      onPointerUp: (_) => _setPressed(false),
+      onPointerCancel: (_) => _setPressed(false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.98 : 1,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: widget.onTap,
             borderRadius: radius,
-            border: gradient == null
-                ? Border.all(color: AppColors.divider)
-                : null,
+            child: Ink(
+              decoration: BoxDecoration(
+                color: widget.gradient == null ? widget.color : null,
+                gradient: widget.gradient,
+                borderRadius: radius,
+                border: widget.gradient == null
+                    ? Border.all(color: AppColors.divider)
+                    : null,
+              ),
+              child: Padding(padding: widget.padding, child: widget.child),
+            ),
           ),
-          child: Padding(padding: padding, child: child),
         ),
       ),
     );

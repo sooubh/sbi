@@ -85,6 +85,58 @@ class PrivacyCenterScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: Insets.m),
+          const SectionHeader(title: 'Data access'),
+          const AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Compass can access',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.success)),
+                SizedBox(height: Insets.s),
+                Row(children: [
+                  Icon(Icons.check_circle_rounded, size: 16, color: AppColors.success),
+                  SizedBox(width: Insets.s),
+                  Text('Behavioral signals', style: TextStyle(fontSize: 13, color: AppColors.ink)),
+                ]),
+                SizedBox(height: 6),
+                Row(children: [
+                  Icon(Icons.check_circle_rounded, size: 16, color: AppColors.success),
+                  SizedBox(width: Insets.s),
+                  Text('Goal progress percentages', style: TextStyle(fontSize: 13, color: AppColors.ink)),
+                ]),
+                SizedBox(height: 6),
+                Row(children: [
+                  Icon(Icons.check_circle_rounded, size: 16, color: AppColors.success),
+                  SizedBox(width: Insets.s),
+                  Text('Your preferences and consent settings', style: TextStyle(fontSize: 13, color: AppColors.ink)),
+                ]),
+                SizedBox(height: Insets.m),
+                Divider(height: 1),
+                SizedBox(height: Insets.m),
+                Text('Compass can never access',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.warning)),
+                SizedBox(height: Insets.s),
+                Row(children: [
+                  Icon(Icons.block_rounded, size: 16, color: AppColors.warning),
+                  SizedBox(width: Insets.s),
+                  Text('Card numbers, PINs and CVV', style: TextStyle(fontSize: 13, color: AppColors.ink)),
+                ]),
+                SizedBox(height: 6),
+                Row(children: [
+                  Icon(Icons.block_rounded, size: 16, color: AppColors.warning),
+                  SizedBox(width: Insets.s),
+                  Text('Account numbers and credentials', style: TextStyle(fontSize: 13, color: AppColors.ink)),
+                ]),
+                SizedBox(height: 6),
+                Row(children: [
+                  Icon(Icons.block_rounded, size: 16, color: AppColors.warning),
+                  SizedBox(width: Insets.s),
+                  Text('Balances, salaries and transactions', style: TextStyle(fontSize: 13, color: AppColors.ink)),
+                ]),
+              ],
+            ),
+          ),
+          const SizedBox(height: Insets.m),
           const SectionHeader(title: 'Personalization level'),
           PrivacyLevelSelector(
             selected: settings.privacyLevel,
