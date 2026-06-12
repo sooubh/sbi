@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/privacy/privacy_sanitizer.dart';
 import '../../core/privacy/safe_signal.dart';
 import '../../core/theme/app_colors.dart';
+import '../../domain/services/ai_service.dart';
+import '../../domain/services/model_download_service.dart';
 import '../../models/insight.dart';
+import '../../providers/achievements_provider.dart';
+import '../../providers/goals_provider.dart';
+import '../../providers/health_score_provider.dart';
 import '../../services/ai/signal_pipeline.dart';
 import '../../services/persona.dart';
 import '../../services/user_settings.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/section_header.dart';
-import 'package:go_router/go_router.dart';
 
 /// Demo Signal Console ("judge mode"): switch personas and fire
 /// privacy-safe signals to watch the PRD section 15 pipeline respond live.
@@ -50,6 +55,8 @@ class DemoConsoleScreen extends ConsumerWidget {
               ],
             ),
           ),
+          const SizedBox(height: Insets.m),
+          const _ModelDownloadSection(),
           const SizedBox(height: Insets.m),
           const SectionHeader(title: 'Demo persona'),
           AppCard(
@@ -130,6 +137,325 @@ class DemoConsoleScreen extends ConsumerWidget {
             ),
             const SizedBox(height: Insets.s + 4),
           ],
+          const SizedBox(height: Insets.m),
+          const SectionHeader(title: 'Model Playground'),
+          const _DemoChatPlayground(),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModelDownloadSection extends ConsumerWidget {
+  const _ModelDownloadSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final downloadState = ref.watch(modelDownloadProvider);
+    final downloadNotifier = ref.read(modelDownloadProvider.notifier);
+    final aiService = ref.watch(aiServiceProvider);
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.download_rounded, color: AppColors.blue),
+              const SizedBox(width: Insets.s),
+              const Expanded(
+                child: Text(
+                  'Local AI Model (llama.cpp)',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppColors.ink),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: aiService.isModelLoaded ? AppColors.successBg : AppColors.warningBg,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  aiService.isModelLoaded ? 'ACTIVE (Native)' : 'FALLBACK (Templates)',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: aiService.isModelLoaded ? AppColors.success : AppColors.warning,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: Insets.m),
+          if (downloadState.status == DownloadStatus.notDownloaded) ...[
+            const Text(
+              'No local GGUF model found. The app is currently running in fast offline template mode.',
+              style: TextStyle(fontSize: 12, color: AppColors.slate),
+            ),
+            const SizedBox(height: Insets.s),
+            FilledButton.tonal(
+              onPressed: () => downloadNotifier.startDownload(),
+              child: const Text('Download TinyLlama Q4 (700MB)'),
+            ),
+          ] else if (downloadState.status == DownloadStatus.downloading) ...[
+            Text(
+              'Downloading model file: ${(downloadState.progress * 100).toStringAsFixed(1)}%',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.ink),
+            ),
+            const SizedBox(height: Insets.s),
+            LinearProgressIndicator(
+              value: downloadState.progress,
+              backgroundColor: AppColors.lightBlue,
+              color: AppColors.blue,
+            ),
+          ] else if (downloadState.status == DownloadStatus.downloaded) ...[
+            const Text(
+              'TinyLlama model successfully downloaded. Native on-device inference is fully operational.',
+              style: TextStyle(fontSize: 12, color: AppColors.slate),
+            ),
+            const SizedBox(height: Insets.s),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => downloadNotifier.deleteModel(),
+                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.warning),
+                    child: const Text('Delete Model File'),
+                  ),
+                ),
+              ],
+            ),
+          ] else if (downloadState.status == DownloadStatus.error) ...[
+            Text(
+              'Download failed: ${downloadState.errorMessage}',
+              style: const TextStyle(fontSize: 12, color: AppColors.warning),
+            ),
+            const SizedBox(height: Insets.s),
+            FilledButton.tonal(
+              onPressed: () => downloadNotifier.startDownload(),
+              child: const Text('Retry Download'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _DemoChatPlayground extends ConsumerStatefulWidget {
+  const _DemoChatPlayground();
+
+  @override
+  ConsumerState<_DemoChatPlayground> createState() => _DemoChatPlaygroundState();
+}
+
+class _DemoChatPlaygroundState extends ConsumerState<_DemoChatPlayground> {
+  final _controller = TextEditingController();
+  final List<({bool fromUser, String text})> _messages = [
+    (fromUser: false, text: 'Hello! I am your local AI. Ask me anything about your current goals, achievements or financial health score to test my responses!'),
+  ];
+  bool _busy = false;
+  bool _showContext = false;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  String _compileSafeContext(WidgetRef ref) {
+    final persona = ref.read(personaProvider);
+    final healthAsync = ref.read(healthScoreStateProvider);
+    final goals = ref.read(goalListProvider);
+    final achievements = ref.read(achievementsStateProvider);
+
+    final healthScoreText = healthAsync.maybeWhen(
+      data: (h) {
+        final sectionDetails = h.sections.map((s) => '${s.name}: ${s.score}/100').join(', ');
+        return '${h.total}/100 ($sectionDetails)';
+      },
+      orElse: () => 'Not loaded',
+    );
+
+    final goalsText = goals.isEmpty 
+        ? 'No active goals.' 
+        : goals.map((g) => '- ${g.name} (${g.category} category): ${g.progressPercent}% complete').join('\n');
+
+    final unlockedBadges = achievements.where((a) => a.isUnlocked).map((a) => a.title).toList();
+    final badgesText = unlockedBadges.isEmpty ? 'No badges unlocked yet.' : unlockedBadges.join(', ');
+
+    return '''
+User Profile:
+- Persona: ${persona.fullName} (${persona.description})
+- Financial Health Score: $healthScoreText
+- Active Goals:
+$goalsText
+- Unlocked Badges: $badgesText
+''';
+  }
+
+  Future<void> _send() async {
+    final text = _controller.text.trim();
+    if (text.isEmpty || _busy) return;
+    _controller.clear();
+
+    setState(() {
+      _messages.add((fromUser: true, text: text));
+      _busy = true;
+    });
+
+    try {
+      final aiService = ref.read(aiServiceProvider);
+      final persona = ref.read(personaProvider);
+      final safeContext = _compileSafeContext(ref);
+
+      final systemPrompt = '''
+You are Compass, a warm, professional, privacy-safe on-device financial assistant. 
+You are having a conversation with the user (persona: ${persona.fullName}). 
+Here is the user's current safe financial context (only percentages, scores, and badges):
+$safeContext
+
+Answer the user's question directly, concisely (max 3 sentences), and constructively.
+CRITICAL: Do NOT mention or ask for card numbers, OTPs, PINs, passwords, or exact bank balances.
+''';
+
+      final reply = await aiService.generate(
+        systemPrompt: systemPrompt,
+        prompt: text,
+        fallbackResponse: 'I am here to help you navigate your goals and score! From your safe dashboard details, you are currently on pace for your goals with a health score of ${ref.read(healthScoreStateProvider).valueOrNull?.total ?? 84}/100.',
+      );
+
+      setState(() {
+        _messages.add((fromUser: false, text: reply));
+      });
+    } catch (e) {
+      setState(() {
+        _messages.add((fromUser: false, text: 'Error generating response: $e'));
+      });
+    } finally {
+      setState(() {
+        _busy = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final safeContextText = _compileSafeContext(ref);
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.blue),
+              const SizedBox(width: Insets.s),
+              const Expanded(
+                child: Text(
+                  'Local AI Chatbot Playground',
+                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 14, color: AppColors.ink),
+                ),
+              ),
+              IconButton(
+                icon: Icon(_showContext ? Icons.visibility : Icons.visibility_off, size: 18, color: AppColors.slate),
+                tooltip: 'Toggle App Context View',
+                onPressed: () {
+                  setState(() {
+                    _showContext = !_showContext;
+                  });
+                },
+              ),
+            ],
+          ),
+          const Text(
+            'Test the LLM using direct free-form queries. App context (goals, health, achievements) is dynamically injected.',
+            style: TextStyle(fontSize: 12, color: AppColors.slate),
+          ),
+          if (_showContext) ...[
+            const SizedBox(height: Insets.s),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(Insets.s + 4),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.divider),
+              ),
+              child: Text(
+                'Injected Context:\n$safeContextText',
+                style: const TextStyle(fontFamily: 'monospace', fontSize: 10, color: AppColors.slate),
+              ),
+            ),
+          ],
+          const SizedBox(height: Insets.m),
+          Container(
+            height: 200,
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: ListView.builder(
+              padding: const EdgeInsets.all(Insets.s),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final msg = _messages[index];
+                return Align(
+                  alignment: msg.fromUser ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: msg.fromUser ? AppColors.deepBlue : AppColors.lightBlue,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      msg.text,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: msg.fromUser ? Colors.white : AppColors.ink,
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          if (_busy) ...[
+            const SizedBox(height: Insets.s),
+            const Row(
+              children: [
+                SizedBox(
+                  width: 12,
+                  height: 12,
+                  child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.blue),
+                ),
+                SizedBox(width: 8),
+                Text('AI is thinking...', style: TextStyle(fontSize: 11, color: AppColors.slate)),
+              ],
+            ),
+          ],
+          const SizedBox(height: Insets.s),
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _controller,
+                  decoration: const InputDecoration(
+                    hintText: 'Ask your local AI...',
+                    hintStyle: TextStyle(fontSize: 12),
+                    border: InputBorder.none,
+                  ),
+                  onSubmitted: (_) => _send(),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.send, size: 18, color: AppColors.blue),
+                onPressed: _send,
+              ),
+            ],
+          ),
         ],
       ),
     );

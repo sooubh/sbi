@@ -12,6 +12,8 @@ class AiService {
   Llama? _localLlama;
   bool _initialized = false;
 
+  bool get isModelLoaded => _initialized && _localLlama != null;
+
   /// Initializes the local llama.cpp engine if a model is found on the device.
   Future<void> initLocalModel(String modelPath) async {
     if (_initialized) return;
