@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -16,7 +15,6 @@ import '../features/shell/main_shell.dart';
 import '../features/splash/splash_screen.dart';
 import '../features/story/weekly_story_screen.dart';
 import '../features/timeline/timeline_screen.dart';
-import '../services/app_prefs.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(

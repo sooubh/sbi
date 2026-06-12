@@ -10,7 +10,6 @@ abstract final class AppTheme {
       brightness: Brightness.dark,
       primary: AppColors.deepBlue,
       surface: AppColors.surface,
-      background: AppColors.background,
     );
     
     return ThemeData(
