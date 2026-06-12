@@ -2,16 +2,20 @@ import 'package:flutter/material.dart';
 
 import 'app_colors.dart';
 
-/// Central theme definition — premium, clean banking look.
+/// Central theme definition — premium, clean dark banking theme.
 abstract final class AppTheme {
-  static ThemeData get light {
+  static ThemeData get dark {
     final scheme = ColorScheme.fromSeed(
       seedColor: AppColors.deepBlue,
+      brightness: Brightness.dark,
       primary: AppColors.deepBlue,
       surface: AppColors.surface,
+      background: AppColors.background,
     );
+    
     return ThemeData(
       useMaterial3: true,
+      brightness: Brightness.dark,
       colorScheme: scheme,
       scaffoldBackgroundColor: AppColors.background,
       dividerColor: AppColors.divider,
@@ -40,7 +44,11 @@ abstract final class AppTheme {
           textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
-      snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
+      snackBarTheme: const SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.surface,
+        contentTextStyle: TextStyle(color: AppColors.ink),
+      ),
     );
   }
 }

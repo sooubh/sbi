@@ -11,7 +11,7 @@ import '../../services/persona.dart';
 import '../../services/user_settings.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/section_header.dart';
-import '../shell/main_shell.dart';
+import 'package:go_router/go_router.dart';
 
 /// Demo Signal Console ("judge mode"): switch personas and fire
 /// privacy-safe signals to watch the PRD section 15 pipeline respond live.
@@ -281,11 +281,8 @@ class _PipelineSheetState extends ConsumerState<_PipelineSheet> {
                 onPressed: _done < 4
                     ? null
                     : () {
-                        final nav = Navigator.of(context);
-                        nav.pop(); // sheet
-                        nav.pop(); // console
-                        ref.read(shellIndexProvider.notifier).state =
-                            ShellTab.compass.index;
+                        Navigator.of(context).pop(); // sheet
+                        context.go('/compass');
                       },
                 style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
                 child: const Text('View in Compass'),

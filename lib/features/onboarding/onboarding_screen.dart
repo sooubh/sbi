@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
@@ -7,7 +8,6 @@ import '../../services/app_prefs.dart';
 import '../../services/user_settings.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/privacy_level_selector.dart';
-import '../shell/main_shell.dart';
 
 /// Three-step onboarding: welcome, privacy explanation, personalization
 /// level + demo consent (PRD Screen 2). Completion is persisted so
@@ -31,9 +31,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       );
     } else {
       ref.read(appPrefsProvider).setOnboardingComplete();
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const MainShell()),
-      );
+      context.go('/home');
     }
   }
 

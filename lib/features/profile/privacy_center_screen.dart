@@ -85,56 +85,68 @@ class PrivacyCenterScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: Insets.m),
-          const SectionHeader(title: 'Data access'),
-          const AppCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Compass can access',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.success)),
-                SizedBox(height: Insets.s),
-                Row(children: [
-                  Icon(Icons.check_circle_rounded, size: 16, color: AppColors.success),
-                  SizedBox(width: Insets.s),
-                  Text('Behavioral signals', style: TextStyle(fontSize: 13, color: AppColors.ink)),
-                ]),
-                SizedBox(height: 6),
-                Row(children: [
-                  Icon(Icons.check_circle_rounded, size: 16, color: AppColors.success),
-                  SizedBox(width: Insets.s),
-                  Text('Goal progress percentages', style: TextStyle(fontSize: 13, color: AppColors.ink)),
-                ]),
-                SizedBox(height: 6),
-                Row(children: [
-                  Icon(Icons.check_circle_rounded, size: 16, color: AppColors.success),
-                  SizedBox(width: Insets.s),
-                  Text('Your preferences and consent settings', style: TextStyle(fontSize: 13, color: AppColors.ink)),
-                ]),
-                SizedBox(height: Insets.m),
-                Divider(height: 1),
-                SizedBox(height: Insets.m),
-                Text('Compass can never access',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.warning)),
-                SizedBox(height: Insets.s),
-                Row(children: [
-                  Icon(Icons.block_rounded, size: 16, color: AppColors.warning),
-                  SizedBox(width: Insets.s),
-                  Text('Card numbers, PINs and CVV', style: TextStyle(fontSize: 13, color: AppColors.ink)),
-                ]),
-                SizedBox(height: 6),
-                Row(children: [
-                  Icon(Icons.block_rounded, size: 16, color: AppColors.warning),
-                  SizedBox(width: Insets.s),
-                  Text('Account numbers and credentials', style: TextStyle(fontSize: 13, color: AppColors.ink)),
-                ]),
-                SizedBox(height: 6),
-                Row(children: [
-                  Icon(Icons.block_rounded, size: 16, color: AppColors.warning),
-                  SizedBox(width: Insets.s),
-                  Text('Balances, salaries and transactions', style: TextStyle(fontSize: 13, color: AppColors.ink)),
-                ]),
-              ],
-            ),
+          const SectionHeader(title: 'Data access dashboard'),
+          const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: AppCard(
+                  padding: EdgeInsets.all(Insets.s + 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle_rounded, size: 16, color: AppColors.success),
+                          SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Compass Sees',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.success),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: Insets.m),
+                      _AccessItem(text: 'Behavioral signals (trends only)'),
+                      SizedBox(height: Insets.s),
+                      _AccessItem(text: 'Goal progress % (no values)'),
+                      SizedBox(height: Insets.s),
+                      _AccessItem(text: 'Unlocked badges & streaks'),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(width: Insets.s),
+              Expanded(
+                child: AppCard(
+                  padding: EdgeInsets.all(Insets.s + 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.cancel_rounded, size: 16, color: AppColors.warning),
+                          SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Never Sees',
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.warning),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: Insets.m),
+                      _NoAccessItem(text: 'PINs, OTPs or passwords'),
+                      SizedBox(height: Insets.s),
+                      _NoAccessItem(text: 'Account or card numbers'),
+                      SizedBox(height: Insets.s),
+                      _NoAccessItem(text: 'Exact balances or values'),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: Insets.m),
           const SectionHeader(title: 'Personalization level'),
@@ -197,6 +209,50 @@ class PrivacyCenterScreen extends ConsumerWidget {
           const SizedBox(height: Insets.m),
         ],
       ),
+    );
+  }
+}
+
+class _AccessItem extends StatelessWidget {
+  const _AccessItem({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(Icons.check_circle_rounded, size: 14, color: AppColors.success),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 12.5, color: AppColors.slate),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _NoAccessItem extends StatelessWidget {
+  const _NoAccessItem({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(Icons.cancel_rounded, size: 14, color: AppColors.warning),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: const TextStyle(fontSize: 12.5, color: AppColors.slate),
+          ),
+        ),
+      ],
     );
   }
 }

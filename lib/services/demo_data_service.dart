@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/privacy/privacy_level.dart';
 import '../models/goal.dart';
 import '../models/insight.dart';
+import '../providers/goals_provider.dart';
 import 'demo_catalog.dart';
-import 'firebase/firestore_repository.dart';
 import 'persona.dart';
 import 'user_settings.dart';
 
@@ -132,30 +132,19 @@ final heroInsightProvider = Provider<Insight>((ref) {
 
 /// Goals: persona-aware, hydrates from Firestore for the default persona
 /// (whose data is seeded), and persists new goals.
+
 class GoalsNotifier extends Notifier<List<Goal>> {
   @override
   List<Goal> build() {
-    final persona = ref.watch(personaProvider);
-    final repo = ref.watch(firestoreRepositoryProvider);
-    if (repo != null && persona == DemoPersona.youngProfessional) {
-      Future(() async {
-        final goals = await repo.fetchGoals();
-        if (goals.isNotEmpty) state = goals;
-      });
-    }
-    return goalsForPersona(persona);
+    return ref.watch(goalListProvider);
   }
 
   void addGoal({required String name, required String category}) {
-    final goal = Goal(
-      id: 'g-${DateTime.now().millisecondsSinceEpoch}',
-      name: name,
-      category: category,
-      progressPercent: 0,
-      aiNudge: 'New goal created. Set a recurring auto-save to build momentum.',
-    );
-    state = [...state, goal];
-    ref.read(firestoreRepositoryProvider)?.addGoal(goal).ignore();
+    ref.read(goalListProvider.notifier).addGoal(
+          name: name,
+          category: category,
+          targetAmount: 20000.0,
+        );
   }
 }
 

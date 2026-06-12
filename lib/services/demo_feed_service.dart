@@ -12,8 +12,11 @@ import 'user_settings.dart';
 /// Feed providers: demo catalog first, hydrated from Firestore when
 /// available. Shapes match the PRD section 10 documents.
 
+import '../providers/health_score_provider.dart';
+
 final healthScoreProvider = Provider<HealthScore>((ref) {
-  return const HealthScore(
+  final asyncVal = ref.watch(healthScoreStateProvider);
+  return asyncVal.value ?? const HealthScore(
     total: 84,
     trendDelta: 5,
     history: [72, 75, 74, 78, 79, 84],
@@ -24,11 +27,7 @@ final healthScoreProvider = Provider<HealthScore>((ref) {
       HealthScoreSection(name: 'Consistency', score: 90),
       HealthScoreSection(name: 'Stability', score: 85),
     ],
-    aiExplanation:
-        'Your score improved because savings consistency and goal progress '
-        'trended up this month, while spending stayed within its usual range. '
-        'This score is calculated only from behavioral patterns — never from '
-        'raw amounts or transactions.',
+    aiExplanation: 'Compass is calculating your dynamic financial health score...',
   );
 });
 

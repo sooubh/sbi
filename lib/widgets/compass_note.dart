@@ -27,7 +27,7 @@ class CompassNote extends StatelessWidget {
           const SizedBox(width: Insets.s),
           Expanded(
             child: Text(text,
-                style: const TextStyle(fontSize: 13, height: 1.4, color: AppColors.deepBlue)),
+                style: const TextStyle(fontSize: 13, height: 1.4, color: AppColors.ink)),
           ),
           if (reason != null) ...[
             const SizedBox(width: Insets.s),
@@ -38,7 +38,7 @@ class CompassNote extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.deepBlue,
+                  color: AppColors.blue,
                   decoration: TextDecoration.underline,
                 ),
               ),

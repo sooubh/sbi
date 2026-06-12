@@ -1,6 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:isar/isar.dart';
 
 import '../core/privacy/privacy_level.dart';
+import '../data/database/collections/user_profile.dart';
+import '../data/database/isar_service.dart';
 import 'firebase/firestore_repository.dart';
 
 /// User-controlled privacy and AI preferences (PRD Feature 8).
@@ -54,11 +57,39 @@ class UserSettings {
 
 class UserSettingsNotifier extends Notifier<UserSettings> {
   @override
-  UserSettings build() => const UserSettings();
+  UserSettings build() {
+    final isar = ref.watch(isarServiceProvider).db;
+    final profile = isar.userProfileCollections.where().findFirstSync();
+    
+    if (profile != null) {
+      return UserSettings(
+        privacyLevel: profile.privacyLevel,
+        detailedInsights: profile.cloudEnhancementEnabled,
+        demoConsent: profile.onboardingComplete,
+      );
+    }
+    return const UserSettings();
+  }
 
-  /// Updates state and persists privacy settings to Firestore when available.
+  /// Updates state and persists privacy settings locally and to Firestore.
   void _update(UserSettings next) {
     state = next;
+
+    final isar = ref.read(isarServiceProvider).db;
+    isar.writeTxn(() async {
+      var profile = await isar.userProfileCollections.where().findFirst();
+      profile ??= UserProfileCollection()
+        ..userId = 'demo-user'
+        ..name = 'Aarav Rao'
+        ..createdAt = DateTime.now();
+
+      profile.privacyLevel = next.privacyLevel;
+      profile.cloudEnhancementEnabled = next.detailedInsights;
+      profile.onboardingComplete = next.demoConsent;
+
+      await isar.userProfileCollections.put(profile);
+    }).ignore();
+
     ref.read(firestoreRepositoryProvider)?.saveUserSettings(next).ignore();
   }
 

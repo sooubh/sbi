@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/app_prefs.dart';
-import '../onboarding/onboarding_screen.dart';
-import '../shell/main_shell.dart';
 
 /// Animated splash with privacy-first branding (PRD Screen 1). Returning
 /// users skip onboarding and land directly on the shell.
@@ -32,15 +31,11 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   void _go() {
     if (!mounted) return;
     final onboarded = ref.read(appPrefsProvider).onboardingComplete;
-    final Widget next =
-        onboarded ? const MainShell() : const OnboardingScreen();
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (_, animation, __) =>
-            FadeTransition(opacity: animation, child: next),
-        transitionDuration: const Duration(milliseconds: 400),
-      ),
-    );
+    if (onboarded) {
+      context.go('/home');
+    } else {
+      context.go('/onboarding');
+    }
   }
 
   @override
