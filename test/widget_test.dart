@@ -14,8 +14,13 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const CompassApp());
 
-    // Wait for splash screen animations and navigation to complete.
-    await tester.pumpAndSettle(const Duration(seconds: 3));
+    // Advance the clock by 3 seconds to trigger the navigation from splash screen.
+    // We use pump(duration) instead of pumpAndSettle because SplashScreen 
+    // contains an infinite CircularProgressIndicator.
+    await tester.pump(const Duration(seconds: 3));
+    
+    // Pump one more frame to process the navigation result.
+    await tester.pump();
 
     // Verify that the app pumps without error.
     expect(tester.takeException(), isNull);
