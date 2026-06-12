@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../core/utils/goal_icons.dart';
 import '../../../models/goal.dart';
 import '../../../widgets/app_card.dart';
 
@@ -11,14 +12,6 @@ class GoalPreviewCard extends StatelessWidget {
 
   final Goal goal;
 
-  static const _icons = <String, IconData>{
-    'emergency': Icons.health_and_safety_rounded,
-    'travel': Icons.flight_takeoff_rounded,
-    'vehicle': Icons.two_wheeler_rounded,
-    'education': Icons.school_rounded,
-    'family': Icons.family_restroom_rounded,
-  };
-
   @override
   Widget build(BuildContext context) {
     return AppCard(
@@ -27,7 +20,7 @@ class GoalPreviewCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: const BoxDecoration(color: AppColors.lightBlue, shape: BoxShape.circle),
-            child: Icon(_icons[goal.category] ?? Icons.flag_rounded, size: 20, color: AppColors.deepBlue),
+            child: Icon(goalIcon(goal.category), size: 20, color: AppColors.deepBlue),
           ),
           const SizedBox(width: Insets.m),
           Expanded(

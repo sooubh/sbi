@@ -54,10 +54,47 @@ final heroInsightProvider = Provider<Insight>((ref) {
   }
 });
 
-final demoGoalsProvider = Provider<List<Goal>>((ref) {
-  return const [
-    Goal(id: 'g1', name: 'Emergency fund', category: 'emergency', progressPercent: 72),
-    Goal(id: 'g2', name: 'Goa trip fund', category: 'travel', progressPercent: 45),
-    Goal(id: 'g3', name: 'New bike', category: 'vehicle', progressPercent: 18),
-  ];
-});
+/// Goals as a Notifier so the Goal Coach (PRD Feature 4) can add goals
+/// without changing any consumer widgets.
+class GoalsNotifier extends Notifier<List<Goal>> {
+  @override
+  List<Goal> build() => const [
+        Goal(
+          id: 'g1',
+          name: 'Emergency fund',
+          category: 'emergency',
+          progressPercent: 72,
+          aiNudge: 'You are ahead of pace. One more steady month reaches the 75% milestone.',
+        ),
+        Goal(
+          id: 'g2',
+          name: 'Goa trip fund',
+          category: 'travel',
+          progressPercent: 45,
+          aiNudge: 'Progress slowed slightly. A small weekly top-up keeps the trip on schedule.',
+        ),
+        Goal(
+          id: 'g3',
+          name: 'New bike',
+          category: 'vehicle',
+          progressPercent: 18,
+          aiNudge: 'A recurring auto-save would build early momentum for this goal.',
+        ),
+      ];
+
+  void addGoal({required String name, required String category}) {
+    state = [
+      ...state,
+      Goal(
+        id: 'g-${DateTime.now().millisecondsSinceEpoch}',
+        name: name,
+        category: category,
+        progressPercent: 0,
+        aiNudge: 'New goal created. Set a recurring auto-save to build momentum.',
+      ),
+    ];
+  }
+}
+
+final demoGoalsProvider =
+    NotifierProvider<GoalsNotifier, List<Goal>>(GoalsNotifier.new);

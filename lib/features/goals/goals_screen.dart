@@ -1,16 +1,140 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../widgets/coming_soon.dart';
+import '../../core/constants/app_constants.dart';
+import '../../core/theme/app_colors.dart';
+import '../../core/utils/goal_icons.dart';
+import '../../services/demo_data_service.dart';
+import 'widgets/goal_card.dart';
 
-/// Goals screen (PRD Screen 6) — full implementation lands in Phase 2.
-class GoalsScreen extends StatelessWidget {
+/// Goals screen (PRD Screen 6): goal list with progress, milestone badges,
+/// AI nudges and goal creation.
+class GoalsScreen extends ConsumerWidget {
   const GoalsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final goals = ref.watch(demoGoalsProvider);
+
     return Scaffold(
       appBar: AppBar(title: const Text('Goals', style: TextStyle(fontWeight: FontWeight.w800))),
-      body: const ComingSoon(title: 'Goal Coach', phase: 'Phase 2', icon: Icons.flag_rounded),
+      floatingActionButton: FloatingActionButton.extended(
+        backgroundColor: AppColors.deepBlue,
+        foregroundColor: Colors.white,
+        onPressed: () => _showNewGoalSheet(context),
+        icon: const Icon(Icons.add_rounded),
+        label: const Text('New goal'),
+      ),
+      body: ListView.separated(
+        padding: const EdgeInsets.fromLTRB(Insets.m, Insets.m, Insets.m, 96),
+        itemCount: goals.length,
+        separatorBuilder: (_, __) => const SizedBox(height: Insets.s + 4),
+        itemBuilder: (_, i) => GoalCard(goal: goals[i]),
+      ),
+    );
+  }
+
+  void _showNewGoalSheet(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(Corners.sheet)),
+      ),
+      builder: (_) => const _NewGoalSheet(),
+    );
+  }
+}
+
+class _NewGoalSheet extends ConsumerStatefulWidget {
+  const _NewGoalSheet();
+
+  @override
+  ConsumerState<_NewGoalSheet> createState() => _NewGoalSheetState();
+}
+
+class _NewGoalSheetState extends ConsumerState<_NewGoalSheet> {
+  final _nameController = TextEditingController();
+  String _category = 'emergency';
+
+  static const _categories = [
+    ('emergency', 'Emergency'),
+    ('travel', 'Travel'),
+    ('vehicle', 'Vehicle'),
+    ('education', 'Education'),
+    ('family', 'Family'),
+  ];
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  void _create() {
+    final name = _nameController.text.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter a goal name.')),
+      );
+      return;
+    }
+    ref.read(demoGoalsProvider.notifier).addGoal(name: name, category: _category);
+    Navigator.of(context).pop();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Goal "$name" created. Compass will track its pace.')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(
+        left: Insets.l,
+        right: Insets.l,
+        top: Insets.l,
+        bottom: MediaQuery.of(context).viewInsets.bottom + Insets.l,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Create a goal',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.ink)),
+          const SizedBox(height: Insets.m),
+          TextField(
+            controller: _nameController,
+            textCapitalization: TextCapitalization.sentences,
+            decoration: InputDecoration(
+              hintText: 'Goal name, e.g. Laptop fund',
+              filled: true,
+              fillColor: AppColors.background,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: Insets.m),
+          Wrap(
+            spacing: Insets.s,
+            runSpacing: Insets.s,
+            children: [
+              for (final (value, label) in _categories)
+                ChoiceChip(
+                  avatar: Icon(goalIcon(value), size: 16,
+                      color: _category == value ? AppColors.deepBlue : AppColors.slate),
+                  label: Text(label),
+                  selected: _category == value,
+                  selectedColor: AppColors.lightBlue,
+                  onSelected: (_) => setState(() => _category = value),
+                ),
+            ],
+          ),
+          const SizedBox(height: Insets.l),
+          FilledButton(onPressed: _create, child: const Text('Create goal')),
+        ],
+      ),
     );
   }
 }
