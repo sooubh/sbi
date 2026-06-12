@@ -14,8 +14,10 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const CompassApp());
 
-    // Verify that splash screen or initial UI is present.
-    // Since it starts with a SplashScreen, we just verify the app pumps without error.
+    // Wait for splash screen animations and navigation to complete.
+    await tester.pumpAndSettle(const Duration(seconds: 3));
+
+    // Verify that the app pumps without error.
     expect(tester.takeException(), isNull);
   });
 }
