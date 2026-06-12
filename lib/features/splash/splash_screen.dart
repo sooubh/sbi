@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../services/app_prefs.dart';
 import '../onboarding/onboarding_screen.dart';
+import '../shell/main_shell.dart';
 
-/// Animated splash with privacy-first branding (PRD Screen 1).
-class SplashScreen extends StatefulWidget {
+/// Animated splash with privacy-first branding (PRD Screen 1). Returning
+/// users skip onboarding and land directly on the shell.
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller = AnimationController(
     vsync: this,
@@ -22,18 +26,21 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(milliseconds: 2200), () {
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (_, animation, __) => FadeTransition(
-            opacity: animation,
-            child: const OnboardingScreen(),
-          ),
-          transitionDuration: const Duration(milliseconds: 400),
-        ),
-      );
-    });
+    Future.delayed(const Duration(milliseconds: 2200), _go);
+  }
+
+  void _go() {
+    if (!mounted) return;
+    final onboarded = ref.read(appPrefsProvider).onboardingComplete;
+    final Widget next =
+        onboarded ? const MainShell() : const OnboardingScreen();
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, animation, __) =>
+            FadeTransition(opacity: animation, child: next),
+        transitionDuration: const Duration(milliseconds: 400),
+      ),
+    );
   }
 
   @override

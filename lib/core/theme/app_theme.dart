@@ -20,6 +20,11 @@ abstract final class AppTheme {
         foregroundColor: AppColors.ink,
         elevation: 0,
         centerTitle: false,
+        titleTextStyle: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w800,
+          color: AppColors.ink,
+        ),
       ),
       navigationBarTheme: const NavigationBarThemeData(
         backgroundColor: AppColors.surface,

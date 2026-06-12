@@ -25,12 +25,33 @@ class GoalsScreen extends ConsumerWidget {
         icon: const Icon(Icons.add_rounded),
         label: const Text('New goal'),
       ),
-      body: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(Insets.m, Insets.m, Insets.m, 96),
-        itemCount: goals.length,
-        separatorBuilder: (_, __) => const SizedBox(height: Insets.s + 4),
-        itemBuilder: (_, i) => GoalCard(goal: goals[i]),
-      ),
+      body: goals.isEmpty
+          ? const Center(
+              child: Padding(
+                padding: EdgeInsets.all(Insets.l),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.flag_rounded, size: 44, color: AppColors.slate),
+                    SizedBox(height: Insets.m),
+                    Text('No goals yet',
+                        style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink)),
+                    SizedBox(height: Insets.xs),
+                    Text(
+                      'Create your first goal and Compass will coach its pace.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 13, color: AppColors.slate),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(Insets.m, Insets.m, Insets.m, 96),
+              itemCount: goals.length,
+              separatorBuilder: (_, __) => const SizedBox(height: Insets.s + 4),
+              itemBuilder: (_, i) => GoalCard(goal: goals[i]),
+            ),
     );
   }
 

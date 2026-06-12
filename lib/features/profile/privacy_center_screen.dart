@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_constants.dart';
-import '../../core/privacy/privacy_level.dart';
 import '../../core/privacy/privacy_sanitizer.dart';
 import '../../core/privacy/safe_signal.dart';
 import '../../core/theme/app_colors.dart';
 import '../../services/user_settings.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/privacy_level_selector.dart';
 import '../../widgets/section_header.dart';
 
 /// Privacy Control Center (PRD Feature 8 / Screen 10): personalization
@@ -86,33 +86,10 @@ class PrivacyCenterScreen extends ConsumerWidget {
           ),
           const SizedBox(height: Insets.m),
           const SectionHeader(title: 'Personalization level'),
-          for (final level in PrivacyLevel.values) ...[
-            AppCard(
-              color: settings.privacyLevel == level ? AppColors.lightBlue : AppColors.surface,
-              onTap: () => notifier.setPrivacyLevel(level),
-              child: Row(
-                children: [
-                  Icon(
-                    settings.privacyLevel == level
-                        ? Icons.radio_button_checked_rounded
-                        : Icons.radio_button_off_rounded,
-                    color: AppColors.deepBlue,
-                  ),
-                  const SizedBox(width: Insets.m),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(level.label, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink)),
-                        Text(level.description, style: const TextStyle(fontSize: 13, color: AppColors.slate)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: Insets.s),
-          ],
+          PrivacyLevelSelector(
+            selected: settings.privacyLevel,
+            onChanged: notifier.setPrivacyLevel,
+          ),
           const SizedBox(height: Insets.s),
           const SectionHeader(title: 'AI permissions'),
           AppCard(

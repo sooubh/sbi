@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_constants.dart';
-import '../../core/privacy/privacy_level.dart';
 import '../../core/theme/app_colors.dart';
+import '../../services/app_prefs.dart';
 import '../../services/user_settings.dart';
 import '../../widgets/app_card.dart';
+import '../../widgets/privacy_level_selector.dart';
 import '../shell/main_shell.dart';
 
 /// Three-step onboarding: welcome, privacy explanation, personalization
-/// level + demo consent (PRD Screen 2).
+/// level + demo consent (PRD Screen 2). Completion is persisted so
+/// returning users go straight to the shell.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -28,6 +30,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         curve: Curves.easeOutCubic,
       );
     } else {
+      ref.read(appPrefsProvider).setOnboardingComplete();
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const MainShell()),
       );
@@ -169,34 +172,10 @@ class _PersonalizationPage extends StatelessWidget {
           style: TextStyle(color: AppColors.slate),
         ),
         const SizedBox(height: Insets.l),
-        for (final level in PrivacyLevel.values) ...[
-          AppCard(
-            color: settings.privacyLevel == level ? AppColors.lightBlue : AppColors.surface,
-            onTap: () => notifier.setPrivacyLevel(level),
-            child: Row(
-              children: [
-                Icon(
-                  settings.privacyLevel == level
-                      ? Icons.radio_button_checked_rounded
-                      : Icons.radio_button_off_rounded,
-                  color: AppColors.deepBlue,
-                ),
-                const SizedBox(width: Insets.m),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(level.label, style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.ink)),
-                      const SizedBox(height: 2),
-                      Text(level.description, style: const TextStyle(fontSize: 13, color: AppColors.slate)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: Insets.s + 4),
-        ],
+        PrivacyLevelSelector(
+          selected: settings.privacyLevel,
+          onChanged: notifier.setPrivacyLevel,
+        ),
         const SizedBox(height: Insets.s),
         AppCard(
           padding: const EdgeInsets.symmetric(horizontal: Insets.m, vertical: Insets.xs),

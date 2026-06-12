@@ -6,8 +6,11 @@ import '../../services/ai/ai_explain_service.dart';
 
 /// Controller for the explain-only chat (PRD Feature 7). Refuses sensitive
 /// account queries and anything outside the allowed explanation topics.
+/// Shows a typing indicator while the AI responds and recovers from errors.
 class ChatController extends Notifier<List<ChatMessage>> {
   bool _busy = false;
+
+  static const _typingText = 'Thinking…';
 
   @override
   List<ChatMessage> build() => const [
@@ -69,12 +72,27 @@ class ChatController extends Notifier<List<ChatMessage>> {
     }
 
     _busy = true;
+    state = [...state, const ChatMessage(fromUser: false, text: _typingText)];
     try {
       final answer = await ref.read(aiExplainServiceProvider).explain(topic);
-      state = [...state, ChatMessage(fromUser: false, text: answer)];
+      _replaceTyping(answer);
+    } catch (_) {
+      _replaceTyping(
+        'Something went wrong while generating the explanation. Please try again.',
+      );
     } finally {
       _busy = false;
     }
+  }
+
+  void _replaceTyping(String answer) {
+    final messages = List<ChatMessage>.from(state);
+    if (messages.isNotEmpty &&
+        !messages.last.fromUser &&
+        messages.last.text == _typingText) {
+      messages.removeLast();
+    }
+    state = [...messages, ChatMessage(fromUser: false, text: answer)];
   }
 }
 

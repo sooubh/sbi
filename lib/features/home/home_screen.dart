@@ -3,8 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/utils/greeting.dart';
+import '../../services/demo_catalog.dart';
 import '../../services/demo_data_service.dart';
 import '../../widgets/section_header.dart';
+import '../shell/main_shell.dart';
 import 'widgets/account_summary_card.dart';
 import 'widgets/compass_insight_card.dart';
 import 'widgets/goal_preview_card.dart';
@@ -24,7 +27,10 @@ class HomeScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(Insets.m),
           children: [
-            const _GreetingHeader(),
+            _GreetingHeader(
+              onBellTap: () => ref.read(shellIndexProvider.notifier).state =
+                  ShellTab.timeline.index,
+            ),
             const SizedBox(height: Insets.m),
             const AccountSummaryCard(),
             const SizedBox(height: Insets.m),
@@ -33,7 +39,12 @@ class HomeScreen extends ConsumerWidget {
             const SectionHeader(title: 'Quick actions'),
             const QuickActionsRow(),
             const SizedBox(height: Insets.m),
-            SectionHeader(title: 'Goal progress', actionLabel: 'View all', onAction: () {}),
+            SectionHeader(
+              title: 'Goal progress',
+              actionLabel: 'View all',
+              onAction: () => ref.read(shellIndexProvider.notifier).state =
+                  ShellTab.goals.index,
+            ),
             for (final goal in goals.take(2)) ...[
               GoalPreviewCard(goal: goal),
               const SizedBox(height: Insets.s + 4),
@@ -46,7 +57,9 @@ class HomeScreen extends ConsumerWidget {
 }
 
 class _GreetingHeader extends StatelessWidget {
-  const _GreetingHeader();
+  const _GreetingHeader({required this.onBellTap});
+
+  final VoidCallback onBellTap;
 
   @override
   Widget build(BuildContext context) {
@@ -55,20 +68,24 @@ class _GreetingHeader extends StatelessWidget {
         const CircleAvatar(
           radius: 22,
           backgroundColor: AppColors.lightBlue,
-          child: Text('AR', style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.deepBlue)),
+          child: Text(DemoProfile.initials,
+              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.deepBlue)),
         ),
         const SizedBox(width: Insets.m),
-        const Expanded(
+        Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Good morning', style: TextStyle(fontSize: 13, color: AppColors.slate)),
-              Text('Aarav', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.ink)),
+              Text(greetingForNow(),
+                  style: const TextStyle(fontSize: 13, color: AppColors.slate)),
+              const Text(DemoProfile.firstName,
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.ink)),
             ],
           ),
         ),
         IconButton(
-          onPressed: () {},
+          tooltip: 'AI activity',
+          onPressed: onBellTap,
           icon: const Icon(Icons.notifications_none_rounded, color: AppColors.ink),
         ),
       ],
