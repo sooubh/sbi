@@ -1,0 +1,70 @@
+# Compass - Privacy-First Banking App
+# GitLab CI/CD Production Configuration
+
+image: ghcr.io/cirruslabs/flutter:stable
+
+variables:
+  # Optimization: Disable analytics to save time and bandwidth
+  FLUTTER_SUPPRESS_ANALYTICS: "true"
+  # Set Gradle user home for caching
+  GRADLE_USER_HOME: "$CI_PROJECT_DIR/.gradle"
+
+# Define the pipeline stages
+stages:
+  - analyze
+  - test
+  - build
+
+# Cache configuration for faster subsequent runs
+cache:
+  key:
+    files:
+      - pubspec.lock
+      - android/build.gradle.kts
+  paths:
+    - .pub-cache/
+    - .gradle/wrapper/
+    - .gradle/caches/
+    - build/
+
+# Global before_script to ensure environment is ready
+before_script:
+  - flutter doctor -v
+  - flutter pub get
+
+# --- STAGE: ANALYZE ---
+lint_analysis:
+  stage: analyze
+  script:
+    - echo "Running Static Analysis..."
+    - flutter analyze
+  allow_failure: false
+
+# --- STAGE: TEST ---
+unit_widget_tests:
+  stage: test
+  script:
+    - echo "Running Unit and Widget Tests..."
+    - flutter test --reporter expanded
+
+# --- STAGE: BUILD ---
+build_debug_apk:
+  stage: build
+  script:
+    - echo "Building Debug APK..."
+    # Ensure Android SDK is accepted (Shared Runners often need this)
+    - yes | sdkmanager --licenses || true
+    # Build only the Debug APK
+    - flutter build apk --debug --build-name=1.0.$CI_PIPELINE_IID --build-number=$CI_PIPELINE_IID
+    # Rename for easier identification in artifacts
+    - mv build/app/outputs/flutter-apk/app-debug.apk build/app/outputs/flutter-apk/compass-debug-$CI_PIPELINE_IID.apk
+  artifacts:
+    name: "compass-debug-build-$CI_PIPELINE_IID"
+    paths:
+      - build/app/outputs/flutter-apk/*.apk
+    expire_in: 1 week
+  only:
+    - main
+    - merge_requests
+    - tags
+    - web
