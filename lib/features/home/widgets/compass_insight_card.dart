@@ -31,7 +31,7 @@ class CompassInsightCard extends ConsumerWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.16),
+                  color: Colors.white.withValues(alpha: 0.16),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.explore_rounded, size: 18, color: Colors.white),
@@ -43,14 +43,14 @@ class CompassInsightCard extends ConsumerWidget {
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.2,
-                  color: Colors.white.withOpacity(0.85),
+                  color: Colors.white.withValues(alpha: 0.85),
                 ),
               ),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.16),
+                  color: Colors.white.withValues(alpha: 0.16),
                   borderRadius: BorderRadius.circular(Corners.chip),
                 ),
                 child: Text(
@@ -68,14 +68,14 @@ class CompassInsightCard extends ConsumerWidget {
           const SizedBox(height: 6),
           Text(
             insight.body,
-            style: TextStyle(fontSize: 14, height: 1.4, color: Colors.white.withOpacity(0.9)),
+            style: TextStyle(fontSize: 14, height: 1.4, color: Colors.white.withValues(alpha: 0.9)),
           ),
           const SizedBox(height: Insets.m),
           Row(
             children: [
               Text(
                 'Why am I seeing this?',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white.withOpacity(0.95)),
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Colors.white.withValues(alpha: 0.95)),
               ),
               const SizedBox(width: 4),
               const Icon(Icons.arrow_forward_rounded, size: 15, color: Colors.white),

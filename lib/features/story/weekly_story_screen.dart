@@ -161,7 +161,7 @@ class _Slide extends StatelessWidget {
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 1.6,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: Insets.m),
@@ -174,7 +174,7 @@ class _Slide extends StatelessWidget {
                 style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: Colors.white, height: 1.2)),
             const SizedBox(height: Insets.m),
             Text(slide.detail,
-                style: TextStyle(fontSize: 15, height: 1.5, color: Colors.white.withOpacity(0.9))),
+                style: TextStyle(fontSize: 15, height: 1.5, color: Colors.white.withValues(alpha: 0.9))),
             const Spacer(flex: 3),
             if (slide.signal != null) ...[
               Row(
@@ -188,7 +188,7 @@ class _Slide extends StatelessWidget {
               const SizedBox(height: Insets.s),
             ],
             Text('Privacy-safe signals only — never transactions.',
-                style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.55))),
+                style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.55))),
           ],
         ),
       ),

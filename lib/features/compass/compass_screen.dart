@@ -66,7 +66,7 @@ class CompassScreen extends ConsumerWidget {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.16),
+                    color: Colors.white.withValues(alpha: 0.16),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.route_rounded, size: 20, color: Colors.white),
@@ -81,7 +81,7 @@ class CompassScreen extends ConsumerWidget {
                       const SizedBox(height: 2),
                       Text(
                         'Milestones, badges and monthly highlights — never transactions.',
-                        style: TextStyle(fontSize: 12, height: 1.3, color: Colors.white.withOpacity(0.9)),
+                        style: TextStyle(fontSize: 12, height: 1.3, color: Colors.white.withValues(alpha: 0.9)),
                       ),
                     ],
                   ),

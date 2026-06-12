@@ -64,7 +64,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 Container(
                   padding: const EdgeInsets.all(22),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.12),
+                    color: Colors.white.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(Icons.explore_rounded, size: 56, color: Colors.white),
@@ -77,7 +77,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                 const SizedBox(height: 8),
                 Text(
                   AppConstants.tagline,
-                  style: TextStyle(fontSize: 14, color: Colors.white.withOpacity(0.8)),
+                  style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.8)),
                 ),
                 const SizedBox(height: 40),
                 const SizedBox(

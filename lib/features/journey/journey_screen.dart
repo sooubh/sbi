@@ -108,7 +108,7 @@ class _JourneyHero extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             'Behavioral milestones and highlights — never transactions, balances or account numbers.',
-            style: TextStyle(fontSize: 13, height: 1.4, color: Colors.white.withOpacity(0.9)),
+            style: TextStyle(fontSize: 13, height: 1.4, color: Colors.white.withValues(alpha: 0.9)),
           ),
           const SizedBox(height: Insets.m),
           Row(
@@ -142,7 +142,7 @@ class _Stat extends StatelessWidget {
           Text(value,
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: Colors.white)),
           Text(label,
-              style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.8))),
+              style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.8))),
         ],
       ),
     );

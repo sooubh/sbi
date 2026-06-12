@@ -54,7 +54,7 @@ class _SparklinePainter extends CustomPainter {
         ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [AppColors.lightBlue.withOpacity(0.9), AppColors.lightBlue.withOpacity(0.0)],
+          colors: [AppColors.lightBlue.withValues(alpha: 0.9), AppColors.lightBlue.withValues(alpha: 0.0)],
         ).createShader(Offset.zero & size),
     );
 
