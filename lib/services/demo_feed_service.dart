@@ -31,44 +31,58 @@ final healthScoreProvider = Provider<HealthScore>((ref) {
   );
 });
 
-/// Static in Phase 3; Phase 4 hydrates AI-generated insights from Firestore.
-final insightsFeedProvider = Provider<List<Insight>>((ref) {
-  return const [
-    Insight(
-      id: 'feed-1',
-      title: 'Food spending is trending up',
-      body: 'Food-related spending is higher than usual this month.',
-      recommendation: 'Set a weekly spending limit for the food category.',
-      reason:
-          'Generated from the spending_up_in_food_category signal — only the '
-          'category trend was shared, no amounts or merchants.',
-      confidence: 0.84,
-      signalType: 'spending_up_in_food_category',
-    ),
-    Insight(
-      id: 'feed-2',
-      title: 'A bill is due soon',
-      body: 'An upcoming bill pattern was detected for this week.',
-      recommendation: 'Enable a bill reminder so it is never missed.',
-      reason:
-          'Generated from the bill_due_soon signal. The biller name and '
-          'amount were never shared with the AI.',
-      confidence: 0.91,
-      signalType: 'bill_due_soon',
-    ),
-    Insight(
-      id: 'feed-3',
-      title: 'A travel-related event was detected',
-      body: 'Recent activity suggests an upcoming trip.',
-      recommendation: 'Consider setting a short-term trip budget.',
-      reason:
-          'Generated from the travel_event_detected signal — a behavioral '
-          'pattern only, with no booking details.',
-      confidence: 0.78,
-      signalType: 'travel_event_detected',
-    ),
-  ];
-});
+/// AI-generated insights: hydrates from Firestore (written by the
+/// generateInsightOnSignal Cloud Function) with static demo fallback.
+class InsightsFeedNotifier extends Notifier<List<Insight>> {
+  @override
+  List<Insight> build() {
+    final repo = ref.watch(firestoreRepositoryProvider);
+    if (repo != null) {
+      Future(() async {
+        final insights = await repo.fetchAiInsights();
+        if (insights.isNotEmpty) state = insights;
+      });
+    }
+    return const [
+      Insight(
+        id: 'feed-1',
+        title: 'Food spending is trending up',
+        body: 'Food-related spending is higher than usual this month.',
+        recommendation: 'Set a weekly spending limit for the food category.',
+        reason:
+            'Generated from the spending_up_in_food_category signal — only the '
+            'category trend was shared, no amounts or merchants.',
+        confidence: 0.84,
+        signalType: 'spending_up_in_food_category',
+      ),
+      Insight(
+        id: 'feed-2',
+        title: 'A bill is due soon',
+        body: 'An upcoming bill pattern was detected for this week.',
+        recommendation: 'Enable a bill reminder so it is never missed.',
+        reason:
+            'Generated from the bill_due_soon signal. The biller name and '
+            'amount were never shared with the AI.',
+        confidence: 0.91,
+        signalType: 'bill_due_soon',
+      ),
+      Insight(
+        id: 'feed-3',
+        title: 'A travel-related event was detected',
+        body: 'Recent activity suggests an upcoming trip.',
+        recommendation: 'Consider setting a short-term trip budget.',
+        reason:
+            'Generated from the travel_event_detected signal — a behavioral '
+            'pattern only, with no booking details.',
+        confidence: 0.78,
+        signalType: 'travel_event_detected',
+      ),
+    ];
+  }
+}
+
+final insightsFeedProvider =
+    NotifierProvider<InsightsFeedNotifier, List<Insight>>(InsightsFeedNotifier.new);
 
 /// Life events respect the event-tracking permission (Feature 8).
 class LifeEventsNotifier extends Notifier<List<LifeEvent>> {

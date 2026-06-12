@@ -11,6 +11,7 @@ import '../../services/demo_feed_service.dart';
 import '../../widgets/app_card.dart';
 import '../../widgets/insight_explanation_sheet.dart';
 import '../../widgets/section_header.dart';
+import '../chat/chat_screen.dart';
 import '../recommendations/recommendations_screen.dart';
 import '../recommendations/widgets/recommendation_card.dart';
 import 'life_events_screen.dart';
@@ -33,7 +34,18 @@ class CompassScreen extends ConsumerWidget {
         .toList();
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Compass', style: TextStyle(fontWeight: FontWeight.w800))),
+      appBar: AppBar(
+        title: const Text('Compass', style: TextStyle(fontWeight: FontWeight.w800)),
+        actions: [
+          IconButton(
+            tooltip: 'Ask Compass',
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ChatScreen()),
+            ),
+            icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.deepBlue),
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.all(Insets.m),
         children: [

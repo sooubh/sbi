@@ -7,4 +7,7 @@ abstract final class FirestorePaths {
   static const recommendations = 'recommendations';
   static const timeline = 'timeline';
   static const aiSessions = 'aiSessions';
+
+  /// AI-generated insights written by the generateInsightOnSignal function.
+  static const insights = 'insights';
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/privacy/safe_signal.dart';
 import '../../models/goal.dart';
+import '../../models/insight.dart';
 import '../../models/life_event.dart';
 import '../../models/recommendation.dart';
 import '../../models/timeline_entry.dart';
@@ -96,6 +97,31 @@ class FirestoreRepository {
   Future<void> logSignal(SafeSignal signal) => _db
       .collection(FirestorePaths.financialSignals)
       .add({'userId': userId, ...signal.toMap()});
+
+  // --- AI insights & sessions ----------------------------------------------
+
+  /// Insights written by the generateInsightOnSignal Cloud Function.
+  Future<List<Insight>> fetchAiInsights() async {
+    final snapshot = await _owned(FirestorePaths.insights).get();
+    return [
+      for (final doc in snapshot.docs)
+        Insight.fromMap(doc.id, _normalize(doc.data())),
+    ];
+  }
+
+  /// PRD `aiSessions` document: promptType, responseType, privacyLevel.
+  Future<void> logAiSession({
+    required String promptType,
+    required String responseType,
+    required String privacyLevel,
+  }) =>
+      _db.collection(FirestorePaths.aiSessions).add({
+        'userId': userId,
+        'promptType': promptType,
+        'responseType': responseType,
+        'privacyLevel': privacyLevel,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
 
   // --- seeding ---------------------------------------------------------------
 

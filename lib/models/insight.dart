@@ -21,4 +21,16 @@ class Insight {
 
   /// The safe signal that produced this insight.
   final String signalType;
+
+  /// `insights` document shape written by the generateInsightOnSignal
+  /// Cloud Function.
+  factory Insight.fromMap(String id, Map<String, dynamic> map) => Insight(
+        id: id,
+        title: map['title'] as String? ?? 'Compass insight',
+        body: map['body'] as String? ?? '',
+        recommendation: map['recommendation'] as String? ?? '',
+        reason: map['reason'] as String? ?? '',
+        confidence: (map['confidence'] as num?)?.toDouble() ?? 0.8,
+        signalType: map['signalType'] as String? ?? 'signal',
+      );
 }
