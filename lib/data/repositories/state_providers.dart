@@ -111,6 +111,28 @@ Recommendation recommendationFromMap(Map<String, dynamic> map) {
   );
 }
 
+Map<String, dynamic> serviceToMap(ServiceModel service) {
+  return {
+    'id': service.id,
+    'name': service.name,
+    'category': service.category,
+    'isNew': service.isNew,
+    'isActivated': service.isActivated,
+    'badge': service.badge,
+  };
+}
+
+ServiceModel serviceFromMap(Map<String, dynamic> map) {
+  return ServiceModel(
+    id: map['id'] as String,
+    name: map['name'] as String,
+    category: map['category'] as String,
+    isNew: (map['isNew'] as bool?) ?? false,
+    isActivated: (map['isActivated'] as bool?) ?? false,
+    badge: map['badge'] as String?,
+  );
+}
+
 // User Profile state management
 class UserProfileNotifier extends StateNotifier<UserProfile> {
   UserProfileNotifier() : super(MockData.initialUser) {
@@ -332,9 +354,46 @@ final weeklyStoryProvider = Provider<WeeklyStory>((ref) {
 
 // Services state management
 class ServicesNotifier extends StateNotifier<List<ServiceModel>> {
-  ServicesNotifier() : super(MockData.initialServices);
+  ServicesNotifier() : super(MockData.initialServices) {
+    _loadFromHive();
+  }
+
+  void _loadFromHive() {
+    final box = Hive.box('settings');
+    final servicesJson = box.get('services') as String?;
+    if (servicesJson == null) return;
+    try {
+      final List<dynamic> decoded = jsonDecode(servicesJson);
+      state = decoded.map((m) => serviceFromMap(m as Map<String, dynamic>)).toList();
+    } catch (_) {
+      state = MockData.initialServices;
+    }
+  }
+
+  void _saveToHive() {
+    final box = Hive.box('settings');
+    final listMap = state.map((s) => serviceToMap(s)).toList();
+    box.put('services', jsonEncode(listMap));
+  }
 
   void activateService(String id) {
+    final exists = state.any((service) => service.id == id);
+    if (!exists && id == 's_autosave') {
+      state = [
+        ...state,
+        const ServiceModel(
+          id: 's_autosave',
+          name: 'Auto-Save Round Up',
+          category: 'Accounts',
+          isActivated: true,
+          isNew: true,
+          badge: 'Smart',
+        ),
+      ];
+      _saveToHive();
+      return;
+    }
+
     state = [
       for (final service in state)
         if (service.id == id)
@@ -342,6 +401,7 @@ class ServicesNotifier extends StateNotifier<List<ServiceModel>> {
         else
           service
     ];
+    _saveToHive();
   }
 }
 

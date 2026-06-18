@@ -66,5 +66,19 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>Sooubh AI uses the camera for simulated card scanning and video KYC.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Sooubh AI uses the microphone for simulated video KYC and voice-assisted banking.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Sooubh AI can import documents and local GGUF model files selected by the user.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Sooubh AI may save generated receipts or demo documents when requested.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Sooubh AI may connect to local development or model-serving endpoints during demos.</string>
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 </dict>
 </plist>

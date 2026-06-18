@@ -164,6 +164,7 @@ class MockData {
     const ServiceModel(id: 'acc_fd', name: 'Fixed Deposit', category: 'Accounts', isNew: true, badge: 'Recommended'),
     const ServiceModel(id: 'acc_rd', name: 'Recurring Deposit', category: 'Accounts'),
     const ServiceModel(id: 'acc_ppf', name: 'PPF Account', category: 'Accounts'),
+    const ServiceModel(id: 's_autosave', name: 'Auto-Save Round Up', category: 'Accounts', isNew: true, badge: 'Smart'),
     
     // Investments
     const ServiceModel(id: 'inv_sip', name: 'SIP Setup', category: 'Investments', isNew: true, badge: 'Hot'),

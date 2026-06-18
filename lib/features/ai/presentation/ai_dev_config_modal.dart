@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/sooubh_card.dart';
+import '../../../core/permissions/app_permissions.dart';
 import '../../../data/repositories/state_providers.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/mock/mock_data.dart';
@@ -127,6 +128,19 @@ class _AiDevConfigModalState extends ConsumerState<AiDevConfigModal> {
     Navigator.of(context).pop();
   }
 
+  Future<void> _requestPermissions() async {
+    final result = await AppPermissions.requestCoreBankingPermissions();
+    if (!mounted) return;
+    final granted = result.values.where((status) => status.isGranted).length;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Permissions checked: $granted/${result.length} granted.'),
+        backgroundColor: granted == result.length ? AppTheme.success : AppTheme.warning,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -249,6 +263,29 @@ class _AiDevConfigModalState extends ConsumerState<AiDevConfigModal> {
                   ),
                   const SizedBox(height: 24),
 
+                  Text(
+                    'App Permissions',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.sbiBlue,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Request camera, microphone, photos/files, and notification permissions used by KYC, model import, and assistant demos.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: _requestPermissions,
+                      icon: const Icon(Icons.verified_user_rounded),
+                      label: const Text('Request Core Permissions'),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+
                   // Section 2: Mock Presets
                   Text(
                     'Load Mock Presets (Hackathon Demo)',
@@ -283,7 +320,7 @@ class _AiDevConfigModalState extends ConsumerState<AiDevConfigModal> {
 
                   // Section 3: Offline Models
                   Text(
-                    'Offline llama.cpp LLMs',
+                    'Offline Demo Knowledge Base',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AppTheme.sbiBlue,
@@ -292,7 +329,7 @@ class _AiDevConfigModalState extends ConsumerState<AiDevConfigModal> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Demonstrates on-device offline capability with local models.',
+                    'Demonstrates offline responses safely. Native llama.cpp/GGUF inference is not bundled in this build.',
                     style: theme.textTheme.bodySmall,
                   ),
                   const SizedBox(height: 12),

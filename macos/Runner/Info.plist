@@ -28,5 +28,13 @@
 	<string>MainMenu</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Sooubh AI uses the camera for simulated KYC demos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Sooubh AI uses the microphone for simulated video KYC and voice-assisted banking.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>Sooubh AI imports user-selected GGUF model files and demo documents.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>Sooubh AI can access user-selected files from Downloads for local model import.</string>
 </dict>
 </plist>

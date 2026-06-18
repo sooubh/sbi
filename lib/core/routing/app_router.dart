@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/navigation_routes.dart';
 import '../../features/navigation/presentation/main_shell.dart';
+import '../../features/navigation/state/bottom_nav_state.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/ai/presentation/model_settings_screen.dart';
 import '../../features/analytics/presentation/web_dashboard_screen.dart';
@@ -15,9 +17,54 @@ class AppRouter {
           builder: (_) => const OnboardingScreen(),
           settings: settings,
         );
-      case NavigationRoutes.mainShell:
+      case '/onboarding/kyc':
         return MaterialPageRoute(
-          builder: (_) => const MainShell(),
+          builder: (_) => const OnboardingScreen(
+            initialStep: OnboardingStep.videoKyc,
+          ),
+          settings: settings,
+        );
+      case '/onboarding/upi':
+        return MaterialPageRoute(
+          builder: (_) => const OnboardingScreen(
+            initialStep: OnboardingStep.upiSetup,
+          ),
+          settings: settings,
+        );
+      case NavigationRoutes.mainShell:
+      case NavigationRoutes.home:
+        return MaterialPageRoute(
+          builder: (_) => const _TabRouteShell(tabIndex: 0),
+          settings: settings,
+        );
+      case NavigationRoutes.accounts:
+        return MaterialPageRoute(
+          builder: (_) => const _TabRouteShell(tabIndex: 1),
+          settings: settings,
+        );
+      case NavigationRoutes.services:
+      case '/services/fd':
+      case '/services/sip':
+      case '/services/insurance':
+        return MaterialPageRoute(
+          builder: (_) => const _TabRouteShell(tabIndex: 2),
+          settings: settings,
+        );
+      case NavigationRoutes.menu:
+      case '/card-control':
+        return MaterialPageRoute(
+          builder: (_) => const _TabRouteShell(tabIndex: 3),
+          settings: settings,
+        );
+      case NavigationRoutes.goalCreation:
+      case '/goals/create':
+        return MaterialPageRoute(
+          builder: (_) => const _TabRouteShell(tabIndex: 0),
+          settings: settings,
+        );
+      case NavigationRoutes.chat:
+        return MaterialPageRoute(
+          builder: (_) => const _TabRouteShell(tabIndex: 2),
           settings: settings,
         );
       case NavigationRoutes.modelSettings:
@@ -51,5 +98,19 @@ class AppRouter {
           settings: settings,
         );
     }
+  }
+}
+
+class _TabRouteShell extends ConsumerWidget {
+  final int tabIndex;
+
+  const _TabRouteShell({required this.tabIndex});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(bottomNavIndexProvider.notifier).state = tabIndex;
+    });
+    return const MainShell();
   }
 }
