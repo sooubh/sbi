@@ -11,6 +11,7 @@ void main() async {
   
   // Initialize Hive storage for local persistence
   await Hive.initFlutter();
+  await Hive.openBox('settings');
   
   runApp(
     const ProviderScope(

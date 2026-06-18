@@ -6,6 +6,7 @@ class GradientScaffold extends StatelessWidget {
   final Widget? appBar;
   final Widget? bottomNavigationBar;
   final Widget? floatingActionButton;
+  final FloatingActionButtonLocation? floatingActionButtonLocation;
   final bool hasTopGradient;
 
   const GradientScaffold({
@@ -14,6 +15,7 @@ class GradientScaffold extends StatelessWidget {
     this.appBar,
     this.bottomNavigationBar,
     this.floatingActionButton,
+    this.floatingActionButtonLocation,
     this.hasTopGradient = true,
   });
 
@@ -58,6 +60,7 @@ class GradientScaffold extends StatelessWidget {
       ),
       bottomNavigationBar: bottomNavigationBar,
       floatingActionButton: floatingActionButton,
+      floatingActionButtonLocation: floatingActionButtonLocation,
     );
   }
 }

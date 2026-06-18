@@ -6,6 +6,7 @@ import '../../../core/widgets/gradient_scaffold.dart';
 import '../../../core/widgets/sooubh_card.dart';
 import '../../../data/repositories/state_providers.dart';
 import '../../services/widgets/ai_chat_modal.dart';
+import '../../ai/presentation/ai_dev_config_modal.dart';
 
 class MenuScreen extends ConsumerWidget {
   const MenuScreen({super.key});
@@ -384,9 +385,16 @@ class MenuScreen extends ConsumerWidget {
                   const Divider(height: 1, indent: 16, endIndent: 16),
                   _buildMenuTile(
                     context: context,
-                    icon: Icons.offline_bolt_outlined,
-                    title: 'Offline AI Settings',
-                    onTap: () => Navigator.of(context).pushNamed(NavigationRoutes.modelSettings),
+                    icon: Icons.insights_rounded,
+                    title: 'AI Financial Coach',
+                    onTap: () => Navigator.of(context).pushNamed(NavigationRoutes.financialCoach),
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
+                  _buildMenuTile(
+                    context: context,
+                    icon: Icons.settings_suggest_outlined,
+                    title: 'AI & Developer Settings',
+                    onTap: () => AiDevConfigModal.show(context),
                   ),
                 ],
               ),

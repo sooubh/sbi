@@ -6,8 +6,10 @@ import '../../../core/widgets/sooubh_card.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../core/widgets/circular_score_ring.dart';
 import '../../../data/repositories/state_providers.dart';
+import '../../../core/constants/navigation_routes.dart';
 import '../widgets/weekly_story_modal.dart';
-
+import '../../ai/presentation/proactive_ai_widget.dart';
+import '../../../core/widgets/debug_panel.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -18,6 +20,15 @@ class HomeScreen extends ConsumerStatefulWidget {
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _isBalanceVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Reset proactive banner every time the home screen loads fresh
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(proactiveBannerDismissedProvider.notifier).state = false;
+    });
+  }
 
   void _simulateAction(String id, String title) {
     showDialog(
@@ -110,13 +121,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ..sort((a, b) => a.priority.compareTo(b.priority));
 
     return GradientScaffold(
+      floatingActionButton: const FloatingAIOrb(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header Row
+            // ── Proactive AI Banner (auto-speaks first) ──────────────────
+            const ProactiveAIBanner(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -139,16 +153,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ),
                   ],
                 ),
-                IconButton(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Notifications are up to date.'),
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.notifications_outlined, color: AppTheme.textPrimary),
+                Row(
+                  children: [
+                    // 🐛 Debug button
+                    const DebugButton(),
+                    const SizedBox(width: 4),
+                    IconButton(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Notifications are up to date.'),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.notifications_outlined, color: AppTheme.textPrimary),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -220,7 +241,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 _buildQuickActionButton(
                   icon: Icons.send_rounded,
                   label: 'Send',
-                  onTap: () => _showActionAlert('Send Money'),
+                  onTap: () => Navigator.of(context).pushNamed(NavigationRoutes.sendMoney),
                 ),
                 _buildQuickActionButton(
                   icon: Icons.qr_code_scanner_rounded,
@@ -439,6 +460,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // Sooubh Insight Card (Layer 2)
             SooubhCard(
               hasAiBorder: true,
+              onTap: () => Navigator.of(context).pushNamed(NavigationRoutes.financialCoach),
               child: Row(
                 children: [
                   const Icon(Icons.lightbulb_outline_rounded, color: AppTheme.aiTeal, size: 28),

@@ -10,4 +10,6 @@ class NavigationRoutes {
   static const String chat = '/chat';
   static const String modelSettings = '/model-settings';
   static const String dashboard = '/dashboard';
+  static const String sendMoney = '/send-money';
+  static const String financialCoach = '/financial-coach';
 }

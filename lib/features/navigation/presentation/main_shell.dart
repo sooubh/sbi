@@ -6,6 +6,9 @@ import '../../accounts/presentation/accounts_screen.dart';
 import '../../services/presentation/services_screen.dart';
 import '../../menu/presentation/menu_screen.dart';
 
+import '../../onboarding/presentation/onboarding_screen.dart';
+import '../../../data/repositories/state_providers.dart';
+
 class MainShell extends ConsumerWidget {
   const MainShell({super.key});
 
@@ -18,6 +21,12 @@ class MainShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(userProfileProvider);
+    
+    if (user.newUser) {
+      return const OnboardingScreen();
+    }
+
     final currentIndex = ref.watch(bottomNavIndexProvider);
 
     return Scaffold(
