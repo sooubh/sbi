@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/weekly_story.dart';
+import '../../../data/repositories/state_providers.dart';
 
-class WeeklyStoryModal extends StatefulWidget {
+class WeeklyStoryModal extends ConsumerStatefulWidget {
   final WeeklyStory story;
 
   const WeeklyStoryModal({super.key, required this.story});
@@ -20,13 +22,15 @@ class WeeklyStoryModal extends StatefulWidget {
   }
 
   @override
-  State<WeeklyStoryModal> createState() => _WeeklyStoryModalState();
+  ConsumerState<WeeklyStoryModal> createState() => _WeeklyStoryModalState();
 }
 
-class _WeeklyStoryModalState extends State<WeeklyStoryModal> {
+class _WeeklyStoryModalState extends ConsumerState<WeeklyStoryModal> {
   late PageController _pageController;
   int _currentIndex = 0;
   final int _slideCount = 5;
+  bool _autoSaveActivated = false;
+  bool _hasDeposited = false;
 
   @override
   void initState() {
@@ -42,8 +46,8 @@ class _WeeklyStoryModalState extends State<WeeklyStoryModal> {
 
   Widget _buildSlide({
     required BuildContext context,
-    required String title,
     required String emoji,
+    required String title,
     required Widget content,
     required Color bgColor,
   }) {
@@ -67,6 +71,7 @@ class _WeeklyStoryModalState extends State<WeeklyStoryModal> {
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               color: Colors.white,
               fontSize: 24,
+              fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(height: 32),
@@ -87,6 +92,11 @@ class _WeeklyStoryModalState extends State<WeeklyStoryModal> {
   @override
   Widget build(BuildContext context) {
     final story = widget.story;
+    final services = ref.watch(servicesProvider);
+    final user = ref.watch(userProfileProvider);
+    final goals = ref.watch(goalsProvider);
+
+    final autoSaveActive = services.any((s) => s.id == 's_autosave' && s.isActivated) || _autoSaveActivated;
 
     final slides = [
       _buildSlide(
@@ -117,6 +127,47 @@ class _WeeklyStoryModalState extends State<WeeklyStoryModal> {
             ),
             const SizedBox(height: 8),
             const Text('Great job building your emergency buffer!'),
+            const SizedBox(height: 16),
+            if (!_hasDeposited && goals.isNotEmpty) ...[
+              ElevatedButton.icon(
+                icon: const Icon(Icons.add_circle_outline_rounded, color: Colors.teal),
+                label: const Text('Save ₹500 Now', style: TextStyle(color: Colors.teal, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                onPressed: () {
+                  if (user.balance >= 500) {
+                    ref.read(goalsProvider.notifier).saveToGoal(goals.first.id, 500);
+                    ref.read(userProfileProvider.notifier).updateBalance(user.balance - 500);
+                    ref.read(engagementProvider.notifier).trackEvent(
+                      'Saved from Story Recap',
+                      coins: 30,
+                      details: 'Deposited ₹500 to goal: ${goals.first.name} via weekly story',
+                    );
+                    setState(() {
+                      _hasDeposited = true;
+                    });
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('🎉 Deposited ₹500 into Savings Goal! +30 SBI Coins Earned.'),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ] else if (_hasDeposited) ...[
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                  SizedBox(width: 6),
+                  Text('Deposited ₹500! (+30 Coins)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -160,7 +211,7 @@ class _WeeklyStoryModalState extends State<WeeklyStoryModal> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text('You are now 72% closer to complete your Emergency Fund.'),
+            const Text('You are now closer to completing your Emergency Fund goal.'),
           ],
         ),
       ),
@@ -169,11 +220,11 @@ class _WeeklyStoryModalState extends State<WeeklyStoryModal> {
         emoji: '🛡️',
         title: 'AI Smart Tip',
         bgColor: const Color(0xFF00BFA5),
-        content: const Column(
+        content: Column(
           children: [
-            Text('To accelerate your goal savings:'),
-            SizedBox(height: 12),
-            Text(
+            const Text('To accelerate your goal savings:'),
+            const SizedBox(height: 12),
+            const Text(
               'Activate Auto-Save',
               style: TextStyle(
                 fontSize: 28,
@@ -181,8 +232,46 @@ class _WeeklyStoryModalState extends State<WeeklyStoryModal> {
                 color: Colors.white,
               ),
             ),
-            SizedBox(height: 8),
-            Text('Auto-save rounds up your transaction changes and saves them automatically.'),
+            const SizedBox(height: 8),
+            const Text('Auto-save rounds up your transaction changes and saves them automatically.'),
+            const SizedBox(height: 16),
+            if (!autoSaveActive) ...[
+              ElevatedButton.icon(
+                icon: const Icon(Icons.flash_on_rounded, color: Colors.teal),
+                label: const Text('Enable Auto-Save Now', style: TextStyle(color: Colors.teal, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+                onPressed: () {
+                  ref.read(servicesProvider.notifier).activateService('s_autosave');
+                  ref.read(engagementProvider.notifier).trackEvent(
+                    'Activated Auto-Save from Story',
+                    coins: 50,
+                    details: 'Enabled Auto-Save service via weekly story smart tip',
+                  );
+                  setState(() {
+                    _autoSaveActivated = true;
+                  });
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('⚡ Auto-Save Rounded Up Enabled! +50 SBI Coins Earned.'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+              ),
+            ] else ...[
+              const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                  SizedBox(width: 6),
+                  Text('Auto-Save Active! (+50 Coins)', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ],
           ],
         ),
       ),

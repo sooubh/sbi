@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../data/repositories/state_providers.dart';
+import '../../../data/models/financial_goal.dart';
 
 class MessageModel {
   final String text;
   final bool isUser;
   final DateTime timestamp;
+  final Widget? actionWidget;
 
   MessageModel({
     required this.text,
     required this.isUser,
     required this.timestamp,
+    this.actionWidget,
   });
 }
 
-class AiChatModal extends StatefulWidget {
+class AiChatModal extends ConsumerStatefulWidget {
   const AiChatModal({super.key});
 
   static void show(BuildContext context) {
@@ -26,10 +31,10 @@ class AiChatModal extends StatefulWidget {
   }
 
   @override
-  State<AiChatModal> createState() => _AiChatModalState();
+  ConsumerState<AiChatModal> createState() => _AiChatModalState();
 }
 
-class _AiChatModalState extends State<AiChatModal> {
+class _AiChatModalState extends ConsumerState<AiChatModal> {
   final List<MessageModel> _messages = [];
   final TextEditingController _textController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -45,7 +50,6 @@ class _AiChatModalState extends State<AiChatModal> {
   @override
   void initState() {
     super.initState();
-    // Pre-populate with first welcome message
     _messages.add(
       MessageModel(
         text: 'Hello! I am your Sooubh AI assistant. I can help you search features, open deposits, configure savings goals, or clarify card controls. How can I help you today?',
@@ -90,21 +94,131 @@ class _AiChatModalState extends State<AiChatModal> {
     });
     _scrollToBottom();
 
+    // Track chat prompt event
+    ref.read(engagementProvider.notifier).trackEvent(
+      'Sent Chat Query',
+      coins: 5,
+      details: 'User asked: "$text"',
+    );
+
     // Simulate AI reply delay
     Future.delayed(const Duration(milliseconds: 1200), () {
       if (!mounted) return;
       String responseText = '';
+      Widget? actionWidget;
       
-      // Intent mapping
       final query = text.toLowerCase();
       if (query.contains('fixed deposit') || query.contains('fd')) {
-        responseText = 'Fixed Deposits (FD) let you lock in interest rates up to 7.2% for high-yield returns. You can open an FD instantly in the Accounts grid on the Services tab.';
+        responseText = 'Fixed Deposits (FD) let you lock in interest rates up to 7.2% for high-yield returns. Tap below to launch a simulated FD of ₹10,000 instantly.';
+        actionWidget = Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.account_balance_wallet_rounded, size: 16),
+            label: const Text('Open ₹10,000 FD', style: TextStyle(fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.sbiBlue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              final newGoal = FinancialGoal(
+                id: 'g_fd_${DateTime.now().millisecondsSinceEpoch}',
+                name: 'Fixed Deposit (7.2%)',
+                targetAmount: 10000,
+                savedAmount: 10000,
+                monthlyContribution: 0.0,
+                status: 'active',
+              );
+              ref.read(goalsProvider.notifier).addGoal(newGoal);
+              ref.read(userProfileProvider.notifier).incrementGoals();
+              ref.read(engagementProvider.notifier).trackEvent(
+                'Created Fixed Deposit',
+                coins: 60,
+                details: 'Opened new Fixed Deposit goal via chat agent',
+              );
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('🎉 Fixed Deposit Created successfully! +60 SBI Coins Earned.'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+          ),
+        );
       } else if (query.contains('sip') || query.contains('setup') || query.contains('invest')) {
-        responseText = 'A Systematic Investment Plan (SIP) lets you deposit regular sums into mutual funds automatically. Go to Investments on the Services screen and tap "SIP Setup" to start with ₹500/month.';
+        responseText = 'A Systematic Investment Plan (SIP) lets you deposit regular sums into mutual funds automatically. Start a SIP of ₹1,000/month below.';
+        actionWidget = Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: ElevatedButton.icon(
+            icon: const Icon(Icons.trending_up_rounded, size: 16),
+            label: const Text('Start ₹1,000 SIP', style: TextStyle(fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.sbiBlue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () {
+              final newGoal = FinancialGoal(
+                id: 'g_sip_${DateTime.now().millisecondsSinceEpoch}',
+                name: 'Wealth Creator Mutual Fund SIP',
+                targetAmount: 12000,
+                savedAmount: 1000,
+                monthlyContribution: 1000.0,
+                status: 'active',
+              );
+              ref.read(goalsProvider.notifier).addGoal(newGoal);
+              ref.read(userProfileProvider.notifier).incrementGoals();
+              ref.read(engagementProvider.notifier).trackEvent(
+                'Setup Mutual Fund SIP',
+                coins: 50,
+                details: 'Created SIP investment goal via conversational agent',
+              );
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('📈 Mutual Fund SIP Setup completed! +50 SBI Coins Earned.'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+          ),
+        );
       } else if (query.contains('health') || query.contains('score')) {
-        responseText = 'Your Wellness Score is 86/100, which is Good! You can increase it to Excellent by completing video KYC, enabling UPI payment channels, or configuring a savings goal.';
+        final score = ref.read(userProfileProvider).financialHealthScore;
+        responseText = 'Your current Wellness Score is $score/100, which indicates a good, secure banking footprint. You can increase it by completing pending recommendations or setting savings targets.';
       } else if (query.contains('auto-save') || query.contains('round')) {
-        responseText = 'Auto-Save automatically rounds up card transactions (e.g. to the nearest ₹10) and sends the difference to your active savings goal. It is a frictionless way to accumulate savings.';
+        final services = ref.read(servicesProvider);
+        final autoSaveActive = services.any((s) => s.id == 's_autosave' && s.isActivated);
+        
+        responseText = 'Auto-Save automatically rounds up card transactions (e.g. to the nearest ₹10) and sends the difference to your active savings goal. Toggle it below.';
+        actionWidget = Padding(
+          padding: const EdgeInsets.only(top: 8.0),
+          child: ElevatedButton.icon(
+            icon: Icon(autoSaveActive ? Icons.check_circle_rounded : Icons.flash_on_rounded, size: 16),
+            label: Text(autoSaveActive ? 'Auto-Save is Enabled' : 'Enable Auto-Save', style: const TextStyle(fontWeight: FontWeight.bold)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: autoSaveActive ? Colors.grey : AppTheme.aiTeal,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: autoSaveActive ? null : () {
+              ref.read(servicesProvider.notifier).activateService('s_autosave');
+              ref.read(engagementProvider.notifier).trackEvent(
+                'Activated Auto-Save from Chat',
+                coins: 40,
+                details: 'Enabled Auto-Save via conversational helper dialog',
+              );
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('⚡ Auto-Save Enabled! +40 SBI Coins Earned.'),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            },
+          ),
+        );
       } else {
         responseText = 'That is a great question! You can explore sbi features directly through the category grid panels. Let me know if you would like me to explain a specific service like FD, SIP, or Auto-Save.';
       }
@@ -116,6 +230,7 @@ class _AiChatModalState extends State<AiChatModal> {
             text: responseText,
             isUser: false,
             timestamp: DateTime.now(),
+            actionWidget: actionWidget,
           ),
         );
       });
@@ -204,7 +319,7 @@ class _AiChatModalState extends State<AiChatModal> {
             ),
           ),
 
-          // Suggested chips (show only if AI is not typing)
+          // Suggested chips
           if (!_isTyping && _messages.length < 5)
             Container(
               height: 44,
@@ -321,26 +436,32 @@ class _AiChatModalState extends State<AiChatModal> {
           ),
         ],
         Flexible(
-          child: Container(
-            margin: const EdgeInsets.symmetric(vertical: 6.0),
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-            decoration: BoxDecoration(
-              color: isUser ? AppTheme.sbiBlue : AppTheme.cardBg,
-              borderRadius: BorderRadius.only(
-                topLeft: const Radius.circular(16.0),
-                topRight: const Radius.circular(16.0),
-                bottomLeft: Radius.circular(isUser ? 16.0 : 4.0),
-                bottomRight: Radius.circular(isUser ? 4.0 : 16.0),
+          child: Column(
+            crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            children: [
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 6.0),
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+                decoration: BoxDecoration(
+                  color: isUser ? AppTheme.sbiBlue : AppTheme.cardBg,
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(16.0),
+                    topRight: const Radius.circular(16.0),
+                    bottomLeft: Radius.circular(isUser ? 16.0 : 4.0),
+                    bottomRight: Radius.circular(isUser ? 4.0 : 16.0),
+                  ),
+                  boxShadow: isUser ? null : AppTheme.softShadow,
+                ),
+                child: Text(
+                  message.text,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: isUser ? Colors.white : AppTheme.textPrimary,
+                    height: 1.4,
+                  ),
+                ),
               ),
-              boxShadow: isUser ? null : AppTheme.softShadow,
-            ),
-            child: Text(
-              message.text,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: isUser ? Colors.white : AppTheme.textPrimary,
-                height: 1.4,
-              ),
-            ),
+              if (message.actionWidget != null) message.actionWidget!,
+            ],
           ),
         ),
       ],

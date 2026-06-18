@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fl_chart/fl_chart.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/sooubh_card.dart';
+import '../../../data/repositories/state_providers.dart';
+import '../../../data/models/engagement_model.dart';
+import 'package:intl/intl.dart';
 
-class WebDashboardScreen extends StatelessWidget {
+class WebDashboardScreen extends ConsumerWidget {
   const WebDashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final size = MediaQuery.of(context).size;
     final bool isLargeScreen = size.width > 900;
+    final engagement = ref.watch(engagementProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -66,6 +71,10 @@ class WebDashboardScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     _buildAiRecommendationsStats(context),
                   ],
+                  const SizedBox(height: 24),
+
+                  // Live User Activity Logs Tracking (Hackathon Feature Live Stream)
+                  _buildLiveActivityLogs(context, engagement.trackedEvents),
                 ],
               ),
             ),
@@ -536,6 +545,120 @@ class WebDashboardScreen extends StatelessWidget {
           style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
         ),
       ],
+    );
+  }
+
+  Widget _buildLiveActivityLogs(BuildContext context, List<EngagementEvent> events) {
+    final timeFormat = DateFormat('HH:mm:ss');
+    return SooubhCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Live User Activity Log (Engagement Telemetry)',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiTeal.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.circle, color: AppTheme.aiTeal, size: 8),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Live Feed',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppTheme.aiTeal,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (events.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 32.0),
+              child: Center(
+                child: Text(
+                  'No live events tracked yet.\nTry checking balance, viewing story, or configuring auto-save to stream logs here.',
+                  style: TextStyle(color: Colors.grey, fontSize: 12, height: 1.5),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            )
+          else
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: events.length > 5 ? 5 : events.length,
+              itemBuilder: (context, index) {
+                final event = events[index];
+                return Container(
+                  padding: const EdgeInsets.symmetric(vertical: 10.0),
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: AppTheme.background, width: 0.8)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: AppTheme.sbiBlue.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.radio_button_checked_rounded, color: AppTheme.sbiBlue, size: 14),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              event.actionName,
+                              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              event.details,
+                              style: const TextStyle(color: Colors.grey, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '+${event.coinsEarned} Coins',
+                            style: const TextStyle(color: AppTheme.success, fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            timeFormat.format(event.timestamp),
+                            style: const TextStyle(color: Colors.grey, fontSize: 10),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
     );
   }
 }

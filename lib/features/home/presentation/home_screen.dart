@@ -8,6 +8,7 @@ import '../../../core/widgets/circular_score_ring.dart';
 import '../../../data/repositories/state_providers.dart';
 import '../widgets/weekly_story_modal.dart';
 
+
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -67,6 +68,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       
       ref.read(recommendationsProvider.notifier).completeRecommendation(id);
 
+      // Track engagement and award points
+      ref.read(engagementProvider.notifier).trackEvent(
+        'Completed Recommendation: $title',
+        coins: 50,
+        details: 'Recommendation completed: $id',
+      );
+
       // Show Success Toast
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -93,6 +101,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final goals = ref.watch(goalsProvider);
     final recommendations = ref.watch(recommendationsProvider);
     final story = ref.watch(weeklyStoryProvider);
+    final engagement = ref.watch(engagementProvider);
 
     // Filter incomplete recommendations
     final activeRecommendations = recommendations
@@ -166,6 +175,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           setState(() {
                             _isBalanceVisible = !_isBalanceVisible;
                           });
+                          ref.read(engagementProvider.notifier).trackEvent(
+                            'Toggled Balance Visibility',
+                            coins: 5,
+                            details: 'Checked balance visibility to ${_isBalanceVisible ? "Visible" : "Hidden"}',
+                          );
                         },
                         icon: Icon(
                           _isBalanceVisible 
@@ -270,9 +284,122 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             const SizedBox(height: 20),
 
+            // Rewards & Streak Card
+            Text(
+              'YONO Rewards & Achievements',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 10),
+            SooubhCard(
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 28),
+                          const SizedBox(width: 8),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${engagement.streakCount}-Day Streak',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                'Keep logging in daily!',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.amber.shade700, width: 1.5),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.monetization_on_rounded, color: Colors.amber.shade700, size: 20),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${engagement.sbiCoins}',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  fontSize: 16,
+                                  color: Colors.amber.shade800,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 24, thickness: 0.8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Your Badges',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 6,
+                      children: engagement.unlockedAchievements.map((badge) {
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: AppTheme.aiTeal.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppTheme.aiTeal.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.workspace_premium_rounded, color: AppTheme.aiTeal, size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                badge,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppTheme.aiTeal,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // Weekly Story Banner Card
             SooubhCard(
-              onTap: () => WeeklyStoryModal.show(context, story),
+              onTap: () {
+                ref.read(engagementProvider.notifier).trackEvent(
+                  'Viewed Weekly Story',
+                  coins: 15,
+                  details: 'Opened weekly story slider',
+                );
+                WeeklyStoryModal.show(context, story);
+              },
               child: Row(
                 children: [
                   Container(
@@ -543,6 +670,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _showActionAlert(String action) {
+    ref.read(engagementProvider.notifier).trackEvent(
+      'Quick Action: $action',
+      coins: 10,
+      details: 'User tapped quick action: $action',
+    );
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Quick action "$action" launched.'),

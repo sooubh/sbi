@@ -5,7 +5,9 @@ import '../models/recommendation.dart';
 import '../models/weekly_story.dart';
 import '../models/service_model.dart';
 import '../models/transaction_model.dart';
+import '../models/engagement_model.dart';
 import '../mock/mock_data.dart';
+
 
 // User Profile state management
 class UserProfileNotifier extends StateNotifier<UserProfile> {
@@ -118,4 +120,54 @@ class TransactionsNotifier extends StateNotifier<List<TransactionModel>> {
 
 final transactionsProvider = StateNotifierProvider<TransactionsNotifier, List<TransactionModel>>((ref) {
   return TransactionsNotifier();
+});
+
+// Engagement Tracking and Gamification state management
+class EngagementNotifier extends StateNotifier<EngagementState> {
+  EngagementNotifier()
+      : super(const EngagementState(
+          sbiCoins: 120,
+          streakCount: 3,
+          unlockedAchievements: ['YONO Explorer'],
+          trackedEvents: [],
+        ));
+
+  void trackEvent(String actionName, {int coins = 15, String details = ''}) {
+    final newEvent = EngagementEvent(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      actionName: actionName,
+      timestamp: DateTime.now(),
+      coinsEarned: coins,
+      details: details,
+    );
+
+    final updatedEvents = [newEvent, ...state.trackedEvents];
+    final updatedCoins = state.sbiCoins + coins;
+    final achievements = List<String>.from(state.unlockedAchievements);
+
+    // Dynamic achievement unlocks
+    if (updatedEvents.length >= 5 && !achievements.contains('Power User')) {
+      achievements.add('Power User');
+    }
+    if (actionName.contains('Savings Goal') && !achievements.contains('Savings Starter')) {
+      achievements.add('Savings Starter');
+    }
+    if (actionName.contains('Auto-Save') && !achievements.contains('Smart Saver')) {
+      achievements.add('Smart Saver');
+    }
+    if (actionName.contains('KYC') && !achievements.contains('KYC Verified')) {
+      achievements.add('KYC Verified');
+    }
+
+    state = state.copyWith(
+      trackedEvents: updatedEvents,
+      sbiCoins: updatedCoins,
+      unlockedAchievements: achievements,
+      streakCount: state.streakCount + (actionName.contains('Daily Login') ? 1 : 0),
+    );
+  }
+}
+
+final engagementProvider = StateNotifierProvider<EngagementNotifier, EngagementState>((ref) {
+  return EngagementNotifier();
 });
