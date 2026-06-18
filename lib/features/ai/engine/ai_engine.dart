@@ -1,12 +1,13 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import '../../../data/models/recommendation.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../data/models/transaction_model.dart';
 import '../../../data/models/financial_goal.dart';
 import '../../../data/models/service_model.dart';
+import 'local_llama_engine.dart';
 
 // Local Model state model
 class LocalModel {
@@ -15,6 +16,7 @@ class LocalModel {
   final String size;
   final bool isDownloaded;
   final bool isActive;
+  final String? localPath;
 
   const LocalModel({
     required this.id,
@@ -22,6 +24,7 @@ class LocalModel {
     required this.size,
     this.isDownloaded = false,
     this.isActive = false,
+    this.localPath,
   });
 
   LocalModel copyWith({
@@ -30,6 +33,7 @@ class LocalModel {
     String? size,
     bool? isDownloaded,
     bool? isActive,
+    String? localPath,
   }) {
     return LocalModel(
       id: id ?? this.id,
@@ -37,6 +41,7 @@ class LocalModel {
       size: size ?? this.size,
       isDownloaded: isDownloaded ?? this.isDownloaded,
       isActive: isActive ?? this.isActive,
+      localPath: localPath ?? this.localPath,
     );
   }
 }
@@ -67,13 +72,14 @@ class LocalAiNotifier extends StateNotifier<List<LocalModel>> {
     ];
   }
 
-  void importCustomModel(String name, String size) {
+  void importCustomModel(String name, String size, {String? localPath}) {
     final custom = LocalModel(
       id: 'custom_${DateTime.now().millisecondsSinceEpoch}',
       name: name,
       size: size,
       isDownloaded: true,
       isActive: true,
+      localPath: localPath,
     );
     // Deactivate others
     state = [
@@ -91,7 +97,7 @@ final localAiProvider = StateNotifierProvider<LocalAiNotifier, List<LocalModel>>
 // Coordinator Result structure
 class CoordinatorResult {
   final String text;
-  final String engineSource; // "Rule-Based Router", "Llama.cpp (Offline 1.1B)", "Gemini 2.5 Flash"
+  final String engineSource; // "Rule-Based Router", "Offline Demo KB", "Gemini 2.5 Flash"
   final String? actionRoute;
   final Widget? actionWidget;
 
@@ -327,7 +333,7 @@ class RuleEngine {
       response = 'Offline query processed successfully. SBI offers a wide range of services including FDs, SIP Mutual Funds, and automated savings triggers to help grow your funds.';
     }
     
-    return '[$activeModelName - On-Device GGUF Engine]:\n$response';
+    return '[$activeModelName - Simulated Offline Knowledge Base]:\n$response';
   }
 }
 
@@ -412,10 +418,6 @@ class GeminiEngine {
     );
 
     try {
-      final client = HttpClient();
-      final request = await client.postUrl(url);
-      request.headers.contentType = ContentType.json;
-
       // Rich contextual system prompt
       final systemPrompt = '''
 You are Sooubh AI, the agentic financial companion built for the YONO SBI banking app.
@@ -475,12 +477,14 @@ User Query: "$prompt"
         }
       });
 
-      request.write(body);
-      final response = await request.close();
+      final response = await http.post(
+        url,
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(const Duration(seconds: 25));
 
       if (response.statusCode == 200) {
-        final responseBody = await response.transform(utf8.decoder).join();
-        final data = jsonDecode(responseBody);
+        final data = jsonDecode(response.body);
         try {
           final text = data['candidates'][0]['content']['parts'][0]['text'] as String;
           return text.trim();
@@ -488,8 +492,7 @@ User Query: "$prompt"
           return 'Error parsing Gemini response. Please check your API key / parameters.';
         }
       } else {
-        final responseBody = await response.transform(utf8.decoder).join();
-        return 'API Error (${response.statusCode}): $responseBody';
+        return 'API Error (${response.statusCode}): ${response.body}';
       }
     } catch (e) {
       return 'Connection Error: $e. Please verify your internet connection.';
@@ -507,7 +510,7 @@ class AIEngineCoordinator {
     required List<FinancialGoal> goals,
     required List<Recommendation> recommendations,
     required List<ServiceModel> services,
-    required String activeModelName,
+    required LocalModel activeModel,
   }) async {
     // 1. Rule-Based Interceptor (Deterministic Checks)
     final ruleResult = RuleEngine.matchRule(
@@ -523,8 +526,12 @@ class AIEngineCoordinator {
 
     // 2. Task Complexity Routing
     if (RuleEngine.isSmallTask(prompt)) {
-      // Route to llama.cpp Engine (offline simulated model)
-      final text = RuleEngine.generateLlamaResponse(prompt, activeModelName);
+      final llamaResult = await LocalLlamaEngine.generate(
+        prompt: prompt,
+        modelName: activeModel.name,
+        modelPath: activeModel.localPath,
+        fallbackGenerator: RuleEngine.generateLlamaResponse,
+      );
       
       String? actionRoute;
       final lower = prompt.toLowerCase();
@@ -539,8 +546,8 @@ class AIEngineCoordinator {
       }
 
       return CoordinatorResult(
-        text: text,
-        engineSource: 'Llama.cpp (Offline)',
+        text: llamaResult.text,
+        engineSource: llamaResult.source,
         actionRoute: actionRoute,
       );
     }

@@ -100,7 +100,7 @@ class _FinancialCoachScreenState extends ConsumerState<FinancialCoachScreen> {
         goals: goals,
         recommendations: recommendations,
         services: services,
-        activeModelName: activeModel.name,
+        activeModel: activeModel,
       );
       if (mounted) {
         setState(() {
@@ -159,7 +159,7 @@ class _FinancialCoachScreenState extends ConsumerState<FinancialCoachScreen> {
       goals: goals,
       recommendations: recommendations,
       services: services,
-      activeModelName: activeModel.name,
+      activeModel: activeModel,
     );
 
     if (!mounted) return;

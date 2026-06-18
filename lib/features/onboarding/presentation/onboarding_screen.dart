@@ -19,14 +19,19 @@ enum OnboardingStep {
 }
 
 class OnboardingScreen extends ConsumerStatefulWidget {
-  const OnboardingScreen({super.key});
+  final OnboardingStep initialStep;
+
+  const OnboardingScreen({
+    super.key,
+    this.initialStep = OnboardingStep.intentSelection,
+  });
 
   @override
   ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with TickerProviderStateMixin {
-  OnboardingStep _currentStep = OnboardingStep.intentSelection;
+  late OnboardingStep _currentStep;
   late AnimationController _scannerController;
   
   // Forms & OCR State
@@ -50,6 +55,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   @override
   void initState() {
     super.initState();
+    _currentStep = widget.initialStep;
     _scannerController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -167,7 +173,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
       _isLinkingUpi = true;
     });
 
-    Timer(const Duration(seconds: 1800), () {
+    Timer(const Duration(milliseconds: 1800), () {
       if (!mounted) return;
       ref.read(userProfileProvider.notifier).enableUpi();
       setState(() {

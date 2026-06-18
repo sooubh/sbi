@@ -138,7 +138,7 @@ class _AiChatModalState extends ConsumerState<AiChatModal> {
       goals: goals,
       recommendations: recommendations,
       services: services,
-      activeModelName: activeModel.name,
+      activeModel: activeModel,
     );
 
     if (!mounted) return;

@@ -158,9 +158,9 @@ class DebugPanel extends ConsumerWidget {
                           'liveEndpoint':
                               'BidiGenerateContent (bidirectional text streaming)',
                           'localModels':
-                              'TinyLlama 1.1B GGUF | Gemma 2B | Phi-3 Mini | Qwen 1.5B',
+                              'Offline demo KB profiles | GGUF runtime pending',
                           'routingLogic':
-                              'Rule → Llama.cpp (small) → Gemini (complex) → Fallback',
+                              'Rule → Offline demo KB (small) → Gemini (complex) → Fallback',
                           'proactiveBannerDismissed': proactiveDismissed.toString(),
                           'liveStreamedText': liveTyping.isEmpty
                               ? '(not yet received)'
@@ -229,7 +229,7 @@ class DebugPanel extends ConsumerWidget {
                           'framework': 'Flutter Riverpod v2',
                           'stateManagement': 'Riverpod StateNotifier + Hive',
                           'aiStack':
-                              'Gemini 2.5 Flash (REST+Live WS) + Llama.cpp (GGUF mock) + Rule Engine',
+                              'Gemini 2.5 Flash (REST+Live WS) + Offline Demo KB + Rule Engine',
                           'websocket': 'web_socket_channel: ^3.0.1',
                           'charts': 'fl_chart: ^0.69.0',
                           'animations': 'flutter_animate: ^4.5.0',

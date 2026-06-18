@@ -1,5 +1,6 @@
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
+import 'dart:async';
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_theme.dart';
@@ -8,6 +9,7 @@ import '../../../core/widgets/sooubh_card.dart';
 import '../../../core/widgets/primary_button.dart';
 import '../../../data/repositories/state_providers.dart';
 import '../engine/ai_engine.dart';
+import '../engine/local_llama_engine.dart';
 
 class ModelSettingsScreen extends ConsumerStatefulWidget {
   const ModelSettingsScreen({super.key});
@@ -26,101 +28,44 @@ class _ModelSettingsScreenState extends ConsumerState<ModelSettingsScreen> {
     super.dispose();
   }
 
-  void _startRealDownload(String id, String name) async {
+  void _startDemoDownload(String id, String name) {
     setState(() {
       _downloadProgress[id] = 0.001;
     });
 
-    // Map model IDs to real download targets (demo links optimized for fast download feedback)
-    String url = 'https://raw.githubusercontent.com/sooubh/sbi/main/pubspec.yaml';
-    if (id == 'gemma_2b') {
-      url = 'https://raw.githubusercontent.com/sooubh/sbi/main/lib/main.dart';
-    } else if (id == 'phi_3') {
-      url = 'https://raw.githubusercontent.com/sooubh/sbi/main/pubspec.lock';
-    }
-
-    try {
-      final client = HttpClient();
-      final request = await client.getUrl(Uri.parse(url));
-      final response = await request.close();
-
-      if (response.statusCode == 200) {
-        final docDir = await getApplicationDocumentsDirectory();
-        final file = File('${docDir.path}/$id.gguf');
-        final fileSink = file.openWrite();
-
-        final totalBytes = response.contentLength > 0 ? response.contentLength : 15000;
-        int receivedBytes = 0;
-
-        response.listen(
-          (chunk) {
-            fileSink.add(chunk);
-            receivedBytes += chunk.length;
-            if (mounted) {
-              setState(() {
-                _downloadProgress[id] = receivedBytes / totalBytes;
-              });
-            }
-          },
-          onDone: () async {
-            await fileSink.flush();
-            await fileSink.close();
-
-            if (mounted) {
-              ref.read(localAiProvider.notifier).downloadModel(id);
-              setState(() {
-                _downloadProgress.remove(id);
-              });
-
-              ref.read(engagementProvider.notifier).trackEvent(
-                'Downloaded AI Model',
-                coins: 40,
-                details: 'Downloaded model file $id.gguf (${file.lengthSync()} bytes) from internet to local app storage',
-              );
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Downloaded and validated "$name" successfully (Saved locally).'),
-                  backgroundColor: AppTheme.success,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-          },
-          onError: (err) {
-            fileSink.close();
-            if (mounted) {
-              setState(() {
-                _downloadProgress.remove(id);
-              });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Download failed: $err'),
-                  backgroundColor: AppTheme.error,
-                  behavior: SnackBarBehavior.floating,
-                ),
-              );
-            }
-          },
-          cancelOnError: true,
-        );
-      } else {
-        throw Exception('Server returned status: ${response.statusCode}');
+    const tick = Duration(milliseconds: 120);
+    Timer.periodic(tick, (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
       }
-    } catch (e) {
-      if (mounted) {
+      final next = (_downloadProgress[id] ?? 0) + 0.08;
+      if (next >= 1) {
+        timer.cancel();
+        ref.read(localAiProvider.notifier).downloadModel(id);
         setState(() {
           _downloadProgress.remove(id);
         });
+
+        ref.read(engagementProvider.notifier).trackEvent(
+          'Enabled Demo Offline Model',
+          coins: 20,
+          details: 'Enabled $id in simulated offline knowledge-base mode. No GGUF binary was downloaded.',
+        );
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to connect: $e'),
-            backgroundColor: AppTheme.error,
+            content: Text('Enabled "$name" demo model. Real GGUF download/inference is not bundled yet.'),
+            backgroundColor: AppTheme.warning,
             behavior: SnackBarBehavior.floating,
           ),
         );
+      } else {
+        setState(() {
+          _downloadProgress[id] = next;
+        });
       }
-    }
+    });
   }
 
   void _showImportDialog() {
@@ -165,23 +110,87 @@ class _ModelSettingsScreenState extends ConsumerState<ModelSettingsScreen> {
               label: 'Import Model',
               onPressed: () {
                 final text = _modelNameController.text.trim();
-                if (text.isEmpty) return;
+                if (text.isEmpty || !text.toLowerCase().endsWith('.gguf')) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Enter a .gguf file name/path to register a local model.'),
+                      backgroundColor: AppTheme.error,
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                  return;
+                }
                 
                 Navigator.of(context).pop();
-                ref.read(localAiProvider.notifier).importCustomModel(text, '1.2 GB');
-
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Successfully loaded custom GGUF model: "$text".'),
-                    backgroundColor: AppTheme.success,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                final normalized = text.replaceAll('\\', '/');
+                _importValidatedGguf(normalized.split('/').last, path: text);
               },
             ),
           ],
         );
       },
+    );
+  }
+
+  Future<void> _pickAndImportGguf() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['gguf'],
+      allowMultiple: false,
+      withData: true,
+    );
+    final file = result?.files.single;
+    if (file == null) return;
+    await _importValidatedGguf(
+      file.name,
+      path: file.path,
+      bytes: file.bytes,
+      size: file.size,
+    );
+  }
+
+  Future<void> _importValidatedGguf(
+    String name, {
+    String? path,
+    List<int>? bytes,
+    int? size,
+  }) async {
+    final validation = await LocalLlamaEngine.validatePickedFile(
+      name: name,
+      path: path,
+      bytes: bytes == null ? null : Uint8List.fromList(bytes),
+      size: size,
+    );
+    if (!mounted) return;
+    if (!validation.isValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invalid GGUF file. Pick a real .gguf file with a valid GGUF header.'),
+          backgroundColor: AppTheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final fileName = validation.name ?? name;
+    final sizeMb = ((validation.bytes ?? 0) / (1024 * 1024)).toStringAsFixed(1);
+    ref.read(localAiProvider.notifier).importCustomModel(
+      fileName,
+      '$sizeMb MB',
+      localPath: validation.path,
+    );
+    ref.read(engagementProvider.notifier).trackEvent(
+      'Imported GGUF Model',
+      coins: 40,
+      details: 'Validated and registered local GGUF model ${validation.path ?? fileName}',
+    );
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Validated and registered $fileName. llama.cpp native bridge will use it when bundled.'),
+        backgroundColor: AppTheme.success,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -224,7 +233,7 @@ class _ModelSettingsScreenState extends ConsumerState<ModelSettingsScreen> {
                       const Icon(Icons.offline_bolt_rounded, color: AppTheme.aiTeal, size: 28),
                       const SizedBox(width: 12),
                       Text(
-                        'On-Device Offline AI',
+                        'Offline AI Demo Mode',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -234,7 +243,7 @@ class _ModelSettingsScreenState extends ConsumerState<ModelSettingsScreen> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Sooubh AI supports on-device LLM inference using llama.cpp. By downloading a small model, you can ask questions and explore features fully offline without any data leaving your phone.',
+                    'This build includes a safe simulated offline knowledge base. It does not download real GGUF binaries or run llama.cpp yet; add a native llama.cpp bridge before presenting this as true on-device inference.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       height: 1.4,
                     ),
@@ -252,10 +261,19 @@ class _ModelSettingsScreenState extends ConsumerState<ModelSettingsScreen> {
                   'Available Models',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
-                TextButton.icon(
-                  onPressed: _showImportDialog,
-                  icon: const Icon(Icons.file_upload_outlined, size: 18),
-                  label: const Text('Import GGUF'),
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: _pickAndImportGguf,
+                      icon: const Icon(Icons.folder_open_rounded, size: 18),
+                      label: const Text('Pick GGUF'),
+                    ),
+                    TextButton.icon(
+                      onPressed: _showImportDialog,
+                      icon: const Icon(Icons.edit_document, size: 18),
+                      label: const Text('Path'),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -321,7 +339,7 @@ class _ModelSettingsScreenState extends ConsumerState<ModelSettingsScreen> {
                             if (!model.isDownloaded && !isDownloading)
                               IconButton(
                                 icon: const Icon(Icons.download_rounded, color: AppTheme.sbiBlue),
-                                onPressed: () => _startRealDownload(model.id, model.name),
+                                onPressed: () => _startDemoDownload(model.id, model.name),
                               )
                             else if (isDownloading)
                               Text(
