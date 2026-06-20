@@ -133,7 +133,7 @@ class _ModelSettingsScreenState extends ConsumerState<ModelSettingsScreen> {
   }
 
   Future<void> _pickAndImportGguf() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['gguf'],
       allowMultiple: false,

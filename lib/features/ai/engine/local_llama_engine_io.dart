@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 
@@ -76,7 +75,7 @@ class LocalLlamaEngine {
         });
         if (text != null && text.trim().isNotEmpty) {
           return LlamaEngineResult(
-            text: '[${modelName} - llama.cpp native]:\n${text.trim()}',
+            text: '[$modelName - llama.cpp native]:\n${text.trim()}',
             source: 'llama.cpp Native',
             usedNativeRuntime: true,
           );
