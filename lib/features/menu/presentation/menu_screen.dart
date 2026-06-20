@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/constants/navigation_routes.dart';
 import '../../../core/widgets/gradient_scaffold.dart';
@@ -7,6 +8,7 @@ import '../../../core/widgets/sooubh_card.dart';
 import '../../../data/repositories/state_providers.dart';
 import '../../services/widgets/ai_chat_modal.dart';
 import '../../ai/presentation/ai_dev_config_modal.dart';
+import '../../../core/widgets/debug_panel.dart';
 
 class MenuScreen extends ConsumerWidget {
   const MenuScreen({super.key});
@@ -227,6 +229,22 @@ class MenuScreen extends ConsumerWidget {
                 trailing: const Icon(Icons.keyboard_arrow_right_rounded),
                 onTap: () {},
               ),
+              if (kDebugMode) ...[
+                const Divider(height: 1),
+                ListTile(
+                  leading: const Icon(Icons.bug_report_rounded, color: Colors.red),
+                  title: const Text(
+                    'Debug Console',
+                    style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: const Text('Inspect provider registry & configs'),
+                  trailing: const Icon(Icons.keyboard_arrow_right_rounded, color: Colors.red),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    DebugPanel.show(context);
+                  },
+                ),
+              ],
               const SizedBox(height: 16),
             ],
           ),
@@ -238,6 +256,7 @@ class MenuScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(userProfileProvider);
+    final engagement = ref.watch(engagementProvider);
 
     return GradientScaffold(
       body: SingleChildScrollView(
@@ -311,6 +330,50 @@ class MenuScreen extends ConsumerWidget {
                     icon: const Icon(Icons.edit_outlined, color: AppTheme.sbiBlue),
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // Badges Section
+            Text(
+              'Your Badges & Achievements',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 10),
+            SooubhCard(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 6,
+                  children: engagement.unlockedAchievements.map((badge) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: AppTheme.aiTeal.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.aiTeal.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.workspace_premium_rounded, color: AppTheme.aiTeal, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            badge,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppTheme.aiTeal,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
             ),
             const SizedBox(height: 20),
@@ -396,6 +459,53 @@ class MenuScreen extends ConsumerWidget {
                     title: 'AI & Developer Settings',
                     onTap: () => AiDevConfigModal.show(context),
                   ),
+                  if (kDebugMode) ...[
+                    const Divider(height: 1, indent: 16, endIndent: 16),
+                    ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 6.0),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.bug_report_rounded, color: Colors.red, size: 20),
+                      ),
+                      title: Row(
+                        children: [
+                          Text(
+                            'Debug Console',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red.shade400,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'DEV',
+                              style: TextStyle(
+                                color: Colors.red,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      subtitle: const Text(
+                        'View providers, settings & simulation states',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                      trailing: const Icon(Icons.chevron_right_rounded, color: Colors.red),
+                      onTap: () => DebugPanel.show(context),
+                    ),
+                  ],
                 ],
               ),
             ),

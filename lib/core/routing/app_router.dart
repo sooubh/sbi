@@ -78,11 +78,12 @@ class AppRouter {
           settings: settings,
         );
       case NavigationRoutes.sendMoney:
-        final args = settings.arguments as Map<String, String>?;
+        final args = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
           builder: (_) => SendMoneyScreen(
-            recipient: args?['recipient'],
-            amount: args?['amount'],
+            recipient: args?['recipient'] as String?,
+            amount: args?['amount'] as String?,
+            mode: args?['mode'] as String? ?? 'send',
           ),
           settings: settings,
         );

@@ -12,11 +12,13 @@ import '../../../data/models/transaction_model.dart';
 class SendMoneyScreen extends ConsumerStatefulWidget {
   final String? recipient;
   final String? amount;
+  final String mode; // 'send' | 'request' | 'pay' | 'scan'
 
   const SendMoneyScreen({
     super.key,
     this.recipient,
     this.amount,
+    this.mode = 'send',
   });
 
   @override
@@ -39,9 +41,16 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
   String _suggestedNickname = '';
   final TextEditingController _nicknameController = TextEditingController();
 
+  // New states for multiple modes
+  late String _currentMode;
+  String? _selectedBiller;
+  bool _scanComplete = false;
+  Timer? _scanTimer;
+
   @override
   void initState() {
     super.initState();
+    _currentMode = widget.mode;
     _recipientController = TextEditingController(text: widget.recipient ?? '');
     _amountController = TextEditingController(text: widget.amount ?? '');
     _recipientController.addListener(_validateRecipient);
@@ -52,15 +61,46 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
         _validateRecipient();
       });
     }
+
+    if (_currentMode == 'scan') {
+      _startScanTimer();
+    }
   }
 
   @override
   void dispose() {
+    _scanTimer?.cancel();
     _recipientController.dispose();
     _amountController.dispose();
     _ifscController.dispose();
     _nicknameController.dispose();
     super.dispose();
+  }
+
+  void _startScanTimer() {
+    _scanTimer = Timer(const Duration(milliseconds: 1800), () {
+      if (!mounted) return;
+      _detectQR();
+    });
+  }
+
+  void _detectQR() {
+    _scanTimer?.cancel();
+    if (_scanComplete) return;
+    setState(() {
+      _scanComplete = true;
+    });
+
+    ref.read(engagementProvider.notifier).trackEvent(
+      'QR Code Detected',
+      coins: 15,
+      details: 'Mock camera scanned and detected biller Starbucks Coffee',
+    );
+
+    setState(() {
+      _selectedBiller = 'Starbucks Coffee';
+      _currentMode = 'pay';
+    });
   }
 
   void _validateRecipient() {
@@ -144,19 +184,22 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       final newBalance = user.balance - amount;
       ref.read(userProfileProvider.notifier).updateBalance(newBalance);
 
+      final isPay = _currentMode == 'pay';
       final newTx = TransactionModel(
         id: 'tx_send_${DateTime.now().millisecondsSinceEpoch}',
-        merchant: _recipientController.text.trim(),
-        category: _isUpi ? 'UPI Transfer' : 'Bank Transfer',
+        merchant: isPay ? (_selectedBiller ?? 'Merchant') : _recipientController.text.trim(),
+        category: isPay ? 'Utility Bill' : (_isUpi ? 'UPI Transfer' : 'Bank Transfer'),
         amount: -amount,
         date: 'Today',
       );
       ref.read(transactionsProvider.notifier).addTransaction(newTx);
 
       ref.read(engagementProvider.notifier).trackEvent(
-        'Sent Money',
+        isPay ? 'Paid Bill' : 'Sent Money',
         coins: 15,
-        details: 'Transferred ₹$amount to ${_recipientController.text.trim()}',
+        details: isPay 
+            ? 'Paid ₹$amount to ${_selectedBiller ?? "Merchant"}'
+            : 'Transferred ₹$amount to ${_recipientController.text.trim()}',
       );
 
       _nicknameController.text = _suggestedNickname;
@@ -164,7 +207,41 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
       setState(() {
         _isProcessing = false;
         _isSuccess = true;
-        _showNudge = true; // Show AI beneficiary nudge
+        _showNudge = _currentMode == 'send'; // Only show payee save nudge for custom send flow
+      });
+    });
+  }
+
+  void _executeRequest() {
+    final amtText = _amountController.text.trim();
+    if (amtText.isEmpty || double.tryParse(amtText) == null || double.parse(amtText) <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid request amount.'),
+          backgroundColor: AppTheme.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      return;
+    }
+
+    final amount = double.parse(amtText);
+    setState(() {
+      _isProcessing = true;
+    });
+
+    Timer(const Duration(milliseconds: 1500), () {
+      if (!mounted) return;
+
+      ref.read(engagementProvider.notifier).trackEvent(
+        'Requested Money',
+        coins: 15,
+        details: 'Requested ₹$amount from ${_recipientController.text.trim()}',
+      );
+
+      setState(() {
+        _isProcessing = false;
+        _isSuccess = true;
       });
     });
   }
@@ -198,11 +275,24 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     if (_isSuccess) {
       return _buildSuccessScreen();
     }
+
+    if (_currentMode == 'scan') {
+      return _buildScanScreen();
+    }
+
+    if (_currentMode == 'pay') {
+      if (_selectedBiller == null) {
+        return _buildBillerSelectionScreen();
+      } else {
+        return _buildPayBillerScreen();
+      }
+    }
+
+    final theme = Theme.of(context);
+    final isRequest = _currentMode == 'request';
 
     return GradientScaffold(
       body: SingleChildScrollView(
@@ -219,7 +309,7 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
                   onPressed: () => Navigator.of(context).pop(),
                 ),
                 Text(
-                  'Send Money',
+                  isRequest ? 'Request Money' : 'Send Money',
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -306,7 +396,9 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _isUpi ? 'Receiver UPI VPA' : 'Receiver Bank Account Number',
+                    _isUpi 
+                        ? (isRequest ? 'Requester UPI VPA' : 'Receiver UPI VPA') 
+                        : (isRequest ? 'Sender Bank Account Number' : 'Receiver Bank Account Number'),
                     style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary),
                   ),
                   const SizedBox(height: 8),
@@ -351,7 +443,11 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
               hasAiBorder: true,
               child: Row(
                 children: [
-                  const Icon(Icons.security_rounded, color: AppTheme.aiTeal, size: 28),
+                  Icon(
+                    isRequest ? Icons.arrow_downward_rounded : Icons.security_rounded, 
+                    color: AppTheme.aiTeal, 
+                    size: 28,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -359,9 +455,9 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
                       children: [
                         Row(
                           children: [
-                            const Text(
-                              'Transfer Agent',
-                              style: TextStyle(color: AppTheme.aiTeal, fontWeight: FontWeight.bold, fontSize: 13),
+                            Text(
+                              isRequest ? 'Request Assistant' : 'Transfer Agent',
+                              style: const TextStyle(color: AppTheme.aiTeal, fontWeight: FontWeight.bold, fontSize: 13),
                             ),
                             const SizedBox(width: 6),
                             Container(
@@ -373,7 +469,9 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _validationMsg,
+                          isRequest 
+                              ? 'I will track request fulfillment. Provide UPI address.' 
+                              : _validationMsg,
                           style: const TextStyle(color: AppTheme.textPrimary, fontSize: 12, height: 1.4, fontWeight: FontWeight.w500),
                         ),
                       ],
@@ -394,8 +492,278 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
                 children: [
                   Expanded(
                     child: PrimaryButton(
-                      label: 'Send Money Instantly',
-                      onPressed: _isValid ? _executeTransfer : null,
+                      label: isRequest ? 'Request Money Instantly' : 'Send Money Instantly',
+                      onPressed: _isValid ? (isRequest ? _executeRequest : _executeTransfer) : null,
+                      useGradient: true,
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildScanScreen() {
+    return Scaffold(
+      backgroundColor: Colors.black87,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                  const Text(
+                    'Scan QR Code',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const Spacer(),
+              Center(
+                child: Container(
+                  width: 250,
+                  height: 250,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.aiTeal, width: 3),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      Container(
+                        width: 220,
+                        height: 220,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Center(
+                          child: Icon(
+                            Icons.qr_code_scanner_rounded,
+                            color: Colors.white38,
+                            size: 80,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: 20,
+                        child: Container(
+                          width: 210,
+                          height: 2,
+                          color: AppTheme.aiTeal,
+                        ),
+                      )
+                      .animate(onPlay: (controller) => controller.repeat(reverse: true))
+                      .moveY(begin: 0, end: 180, duration: 1500.ms),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              const Text(
+                'Point your camera at a YONO UPI QR code',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Auto-detecting... (1.8s)',
+                style: TextStyle(color: AppTheme.aiTeal, fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              PrimaryButton(
+                label: 'Simulate Detect QR',
+                onPressed: _detectQR,
+                isAiAction: true,
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBillerSelectionScreen() {
+    final theme = Theme.of(context);
+    final mockBillers = [
+      {'name': 'Tata Power', 'desc': 'Electricity Bill', 'icon': Icons.electric_bolt_rounded},
+      {'name': 'Airtel Fiber', 'desc': 'Broadband & Landline', 'icon': Icons.router_rounded},
+      {'name': 'Starbucks Coffee', 'desc': 'Merchant Payment', 'icon': Icons.coffee_rounded},
+      {'name': 'Indraprastha Gas', 'desc': 'Piped Gas Bill', 'icon': Icons.local_fire_department_rounded},
+      {'name': 'SBI Credit Card', 'desc': 'Card Bill Settlement', 'icon': Icons.credit_card_rounded},
+    ];
+
+    return GradientScaffold(
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                Text(
+                  'Select Biller',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Select a utility biller or merchant to pay',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.separated(
+                itemCount: mockBillers.length,
+                separatorBuilder: (context, index) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final biller = mockBillers[index];
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                    leading: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.sbiBlue.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(biller['icon'] as IconData, color: AppTheme.sbiBlue),
+                    ),
+                    title: Text(
+                      biller['name'] as String,
+                      style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                    ),
+                    subtitle: Text(biller['desc'] as String),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () {
+                      setState(() {
+                        _selectedBiller = biller['name'] as String;
+                      });
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPayBillerScreen() {
+    final theme = Theme.of(context);
+    return GradientScaffold(
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  onPressed: () {
+                    setState(() {
+                      _selectedBiller = null;
+                    });
+                  },
+                ),
+                Text(
+                  'Pay Bill',
+                  style: theme.textTheme.headlineMedium?.copyWith(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            SooubhCard(
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.sbiBlue.withValues(alpha: 0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.business_rounded, color: AppTheme.sbiBlue),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _selectedBiller ?? 'Selected Biller',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textPrimary,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Verified Biller account',
+                          style: TextStyle(color: AppTheme.success, fontSize: 12, fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            SooubhCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Enter Amount (₹)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.textPrimary)),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: _amountController,
+                    keyboardType: TextInputType.number,
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.textPrimary),
+                    decoration: const InputDecoration(
+                      hintText: '₹ 0.00',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(10))),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            if (_isProcessing)
+              const Center(
+                child: CircularProgressIndicator(valueColor: AlwaysStoppedAnimation<Color>(AppTheme.sbiBlue)),
+              )
+            else
+              Row(
+                children: [
+                  Expanded(
+                    child: PrimaryButton(
+                      label: 'Confirm & Pay Bill',
+                      onPressed: _executeTransfer,
                       useGradient: true,
                     ),
                   ),
@@ -410,6 +778,18 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
   Widget _buildSuccessScreen() {
     final theme = Theme.of(context);
     final amountText = _amountController.text;
+    final isRequest = _currentMode == 'request';
+    final isPay = _currentMode == 'pay';
+
+    String title = 'Transfer Successful!';
+    String subtitle = '₹ $amountText has been sent to ${_recipientController.text}';
+    if (isRequest) {
+      title = 'Request Sent!';
+      subtitle = '₹ $amountText requested from ${_recipientController.text}';
+    } else if (isPay) {
+      title = 'Payment Successful!';
+      subtitle = '₹ $amountText paid to $_selectedBiller';
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -419,22 +799,24 @@ class _SendMoneyScreenState extends ConsumerState<SendMoneyScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.check_circle_rounded, color: AppTheme.success, size: 84)
-                  .animate().scale(duration: 400.ms, curve: Curves.bounceOut),
+              Icon(
+                isRequest ? Icons.arrow_downward_rounded : Icons.check_circle_rounded, 
+                color: isRequest ? AppTheme.aiTeal : AppTheme.success, 
+                size: 84,
+              ).animate().scale(duration: 400.ms, curve: Curves.bounceOut),
               const SizedBox(height: 16),
-              const Text(
-                'Transfer Successful!',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: AppTheme.textPrimary),
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 22, color: AppTheme.textPrimary),
               ).animate().fadeIn(delay: 200.ms),
               const SizedBox(height: 8),
               Text(
-                '₹ $amountText has been sent to ${_recipientController.text}',
+                subtitle,
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontSize: 14, color: AppTheme.textSecondary),
               ).animate().fadeIn(delay: 300.ms),
               const SizedBox(height: 28),
 
-              // AI Beneficiary Assistant Nudge Card
               if (_showNudge)
                 SooubhCard(
                   hasAiBorder: true,

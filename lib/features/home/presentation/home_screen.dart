@@ -9,7 +9,6 @@ import '../../../data/repositories/state_providers.dart';
 import '../../../core/constants/navigation_routes.dart';
 import '../widgets/weekly_story_modal.dart';
 import '../../ai/presentation/proactive_ai_widget.dart';
-import '../../../core/widgets/debug_panel.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -155,9 +154,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 Row(
                   children: [
-                    // 🐛 Debug button
-                    const DebugButton(),
-                    const SizedBox(width: 4),
                     IconButton(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -234,6 +230,75 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             const SizedBox(height: 16),
 
+            // Hero-ified Sooubh Insight Card
+            SooubhCard(
+              hasAiBorder: true,
+              padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 18.0),
+              onTap: () => Navigator.of(context).pushNamed(NavigationRoutes.financialCoach),
+              child: Row(
+                children: [
+                  const Icon(Icons.lightbulb_outline_rounded, color: AppTheme.aiTeal, size: 28),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              'Sooubh Insight',
+                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontSize: 13,
+                                color: AppTheme.aiTeal,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppTheme.aiTeal.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'AI',
+                                style: TextStyle(
+                                  color: AppTheme.aiTeal,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'You saved ₹1,200 more this week than last week. Great progress!',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // 3-step mock preview row: "● Analyzing ➔ ● Planning ➔ ● Ready"
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildStepItem(context, 'Analyzing', isActive: true, isDone: true),
+                            _buildStepLine(isActive: true),
+                            _buildStepItem(context, 'Planning', isActive: true, isDone: true),
+                            _buildStepLine(isActive: false),
+                            _buildStepItem(context, 'Ready', isActive: true, isDone: false),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+
             // Quick Actions Row
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -241,22 +306,62 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 _buildQuickActionButton(
                   icon: Icons.send_rounded,
                   label: 'Send',
-                  onTap: () => Navigator.of(context).pushNamed(NavigationRoutes.sendMoney),
+                  onTap: () {
+                    ref.read(engagementProvider.notifier).trackEvent(
+                      'Quick Action: Send',
+                      coins: 10,
+                      details: 'User launched Send flow',
+                    );
+                    Navigator.of(context).pushNamed(
+                      NavigationRoutes.sendMoney,
+                      arguments: {'mode': 'send'},
+                    );
+                  },
                 ),
                 _buildQuickActionButton(
                   icon: Icons.qr_code_scanner_rounded,
                   label: 'Scan',
-                  onTap: () => _showActionAlert('Scan & Pay'),
+                  onTap: () {
+                    ref.read(engagementProvider.notifier).trackEvent(
+                      'Quick Action: Scan',
+                      coins: 10,
+                      details: 'User launched Scan flow',
+                    );
+                    Navigator.of(context).pushNamed(
+                      NavigationRoutes.sendMoney,
+                      arguments: {'mode': 'scan'},
+                    );
+                  },
                 ),
                 _buildQuickActionButton(
                   icon: Icons.receipt_long_rounded,
                   label: 'Pay',
-                  onTap: () => _showActionAlert('Pay Bills'),
+                  onTap: () {
+                    ref.read(engagementProvider.notifier).trackEvent(
+                      'Quick Action: Pay',
+                      coins: 10,
+                      details: 'User launched Pay flow',
+                    );
+                    Navigator.of(context).pushNamed(
+                      NavigationRoutes.sendMoney,
+                      arguments: {'mode': 'pay'},
+                    );
+                  },
                 ),
                 _buildQuickActionButton(
                   icon: Icons.arrow_downward_rounded,
                   label: 'Request',
-                  onTap: () => _showActionAlert('Request Money'),
+                  onTap: () {
+                    ref.read(engagementProvider.notifier).trackEvent(
+                      'Quick Action: Request',
+                      coins: 10,
+                      details: 'User launched Request flow',
+                    );
+                    Navigator.of(context).pushNamed(
+                      NavigationRoutes.sendMoney,
+                      arguments: {'mode': 'request'},
+                    );
+                  },
                 ),
               ],
             ),
@@ -305,213 +410,74 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Rewards & Streak Card
-            Text(
-              'YONO Rewards & Achievements',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 10),
+            // Rewards & Story Card
             SooubhCard(
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.local_fire_department_rounded, color: Colors.orange, size: 28),
-                          const SizedBox(width: 8),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '${engagement.streakCount}-Day Streak',
-                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                'Keep logging in daily!',
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.amber.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.amber.shade700, width: 1.5),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(Icons.monetization_on_rounded, color: Colors.amber.shade700, size: 20),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${engagement.sbiCoins}',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                  fontSize: 16,
-                                  color: Colors.amber.shade800,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 24, thickness: 0.8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Your Badges',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Wrap(
-                      spacing: 8,
-                      runSpacing: 6,
-                      children: engagement.unlockedAchievements.map((badge) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: AppTheme.aiTeal.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppTheme.aiTeal.withValues(alpha: 0.3)),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.workspace_premium_rounded, color: AppTheme.aiTeal, size: 14),
-                              const SizedBox(width: 4),
-                              Text(
-                                badge,
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.aiTeal,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Weekly Story Banner Card
-            SooubhCard(
-              onTap: () {
-                ref.read(engagementProvider.notifier).trackEvent(
-                  'Viewed Weekly Story',
-                  coins: 15,
-                  details: 'Opened weekly story slider',
-                );
-                WeeklyStoryModal.show(context, story);
-              },
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppTheme.sbiBlue.withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.auto_stories_rounded, color: AppTheme.sbiBlue),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: SizedBox(
+                height: 48,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
+                        const Text('🔥 ', style: TextStyle(fontSize: 16)),
                         Text(
-                          'Weekly Story Overview',
-                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                            fontSize: 15,
+                          '${engagement.streakCount}-day streak',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Tap to view your week summary insights',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
                       ],
                     ),
-                  ),
-                  const Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Sooubh Insight Card (Layer 2)
-            SooubhCard(
-              hasAiBorder: true,
-              onTap: () => Navigator.of(context).pushNamed(NavigationRoutes.financialCoach),
-              child: Row(
-                children: [
-                  const Icon(Icons.lightbulb_outline_rounded, color: AppTheme.aiTeal, size: 28),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    const VerticalDivider(width: 20, thickness: 1),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Row(
-                          children: [
-                            Text(
-                              'Sooubh Insight',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontSize: 13,
-                                color: AppTheme.aiTeal,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppTheme.aiTeal.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'AI',
-                                style: TextStyle(
-                                  color: AppTheme.aiTeal,
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
+                        const Text('🪙 ', style: TextStyle(fontSize: 16)),
                         Text(
-                          'You saved ₹1,200 more this week than last week. Great progress!',
+                          '${engagement.sbiCoins}',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppTheme.textPrimary,
-                            fontWeight: FontWeight.w500,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],
                     ),
-                  ),
-                ],
+                    const VerticalDivider(width: 20, thickness: 1),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      onPressed: () {
+                        ref.read(engagementProvider.notifier).trackEvent(
+                          'Viewed Weekly Story',
+                          coins: 15,
+                          details: 'Opened weekly story slider',
+                        );
+                        WeeklyStoryModal.show(context, story);
+                      },
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'View Week',
+                            style: TextStyle(
+                              color: AppTheme.sbiBlue,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Icon(Icons.arrow_forward_rounded, color: AppTheme.sbiBlue, size: 14),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 20),
+
+
 
             // Goals Progress Card (Active Goal)
             if (goals.isNotEmpty) ...[
@@ -691,16 +657,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return 'Needs Attention';
   }
 
-  void _showActionAlert(String action) {
-    ref.read(engagementProvider.notifier).trackEvent(
-      'Quick Action: $action',
-      coins: 10,
-      details: 'User tapped quick action: $action',
+
+  Widget _buildStepItem(BuildContext context, String text, {required bool isActive, required bool isDone}) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 8,
+          height: 8,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isDone 
+                ? AppTheme.aiTeal 
+                : (isActive ? AppTheme.aiTeal.withValues(alpha: 0.4) : AppTheme.textSecondary.withValues(alpha: 0.3)),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: isDone 
+                ? AppTheme.textPrimary 
+                : (isActive ? AppTheme.textPrimary.withValues(alpha: 0.7) : AppTheme.textSecondary),
+            fontWeight: isDone ? FontWeight.bold : FontWeight.normal,
+            fontSize: 11,
+          ),
+        ),
+      ],
     );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Quick action "$action" launched.'),
-        behavior: SnackBarBehavior.floating,
+  }
+
+  Widget _buildStepLine({required bool isActive}) {
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        height: 1.5,
+        color: isActive 
+            ? AppTheme.aiTeal.withValues(alpha: 0.6) 
+            : AppTheme.textSecondary.withValues(alpha: 0.2),
       ),
     );
   }
