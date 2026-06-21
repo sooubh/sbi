@@ -36,6 +36,7 @@ class GeminiLiveService {
 
   final String apiKey;
   final String systemPrompt;
+  final void Function(String toolName, Map<String, dynamic> args)? onToolCall;
 
   WebSocketChannel? _channel;
   StreamSubscription? _subscription;
@@ -55,7 +56,11 @@ class GeminiLiveService {
   // Buffer for streaming text chunks
   final StringBuffer _textBuffer = StringBuffer();
 
-  GeminiLiveService({required this.apiKey, required this.systemPrompt});
+  GeminiLiveService({
+    required this.apiKey,
+    required this.systemPrompt,
+    this.onToolCall,
+  });
 
   // ── Connect & setup session ──────────────────────────────────────────────
 
@@ -83,7 +88,94 @@ class GeminiLiveService {
             'temperature': 0.35,
             'max_output_tokens': 600,
             'response_modalities': ['TEXT'],
-          }
+          },
+          if (onToolCall != null)
+            'tools': [
+              {
+                'function_declarations': [
+                  {
+                    'name': 'surface_recommendation',
+                    'description': 'Surfaces a recommendation card to the user\'s home screen. Use this when the user needs to take a specific action (like complete KYC, set up UPI, create a goal, or open a fixed deposit).',
+                    'parameters': {
+                      'type': 'OBJECT',
+                      'properties': {
+                        'id': {
+                          'type': 'STRING',
+                          'description': 'The recommendation ID to surface. Known values: \'r_kyc\', \'r_upi\', \'r_goal\', \'r_fd\'.'
+                        },
+                        'reason': {
+                          'type': 'STRING',
+                          'description': 'A compelling reason explaining why this recommendation is being surfaced right now.'
+                        }
+                      },
+                      'required': ['id', 'reason']
+                    }
+                  },
+                  {
+                    'name': 'log_spending_insight',
+                    'description': 'Logs an analysis of spending patterns to the user\'s engagement tracking system. Use this when detecting abnormal spending, high category usage, or saving opportunities.',
+                    'parameters': {
+                      'type': 'OBJECT',
+                      'properties': {
+                        'category': {
+                          'type': 'STRING',
+                          'description': 'The category of spending (e.g., Food, Travel, Shopping, Bills).'
+                        },
+                        'insight': {
+                          'type': 'STRING',
+                          'description': 'The detailed insight text explaining what was found.'
+                        },
+                        'reason': {
+                          'type': 'STRING',
+                          'description': 'The context/rationale behind the logged event.'
+                        }
+                      },
+                      'required': ['category', 'insight', 'reason']
+                    }
+                  },
+                  {
+                    'name': 'boost_goal_savings',
+                    'description': 'Transfers funds from the main account to a specified savings goal. Capped at a maximum amount of ₹500.',
+                    'parameters': {
+                      'type': 'OBJECT',
+                      'properties': {
+                        'goal_id': {
+                          'type': 'STRING',
+                          'description': 'The ID of the goal to boost (e.g., \'g001\', \'g005\', \'g006\').'
+                        },
+                        'amount': {
+                          'type': 'NUMBER',
+                          'description': 'The amount to transfer. Must be less than or equal to 500.'
+                        },
+                        'reason': {
+                          'type': 'STRING',
+                          'description': 'The explanation for the auto-saving action.'
+                        }
+                      },
+                      'required': ['goal_id', 'amount', 'reason']
+                    }
+                  },
+                  {
+                    'name': 'suggest_service_activation',
+                    'description': 'Activates a service and logs an engagement event for the user. Used for services like \'s_autosave\', \'acc_fd\', \'inv_sip\', \'ins_health\'.',
+                    'parameters': {
+                      'type': 'OBJECT',
+                      'properties': {
+                        'service_id': {
+                          'type': 'STRING',
+                          'description': 'The service ID to activate (e.g., \'acc_fd\', \'inv_sip\', \'s_autosave\', \'ins_health\').'
+                        },
+                        'reason': {
+                          'type': 'STRING',
+                          'description': 'Why this service is suggested and activated.'
+                        }
+                      },
+                      'required': ['service_id', 'reason']
+                    }
+                  }
+                ]
+              }
+            ]
         }
       };
 
@@ -189,9 +281,48 @@ class GeminiLiveService {
         }
       }
 
-      // Tool call / function call from model (future extension)
+      // Tool call / function call from model
       if (data.containsKey('toolCall')) {
         debugPrint('[GeminiLive] Tool call received: ${data['toolCall']}');
+        final toolCall = data['toolCall'] as Map<String, dynamic>;
+        final functionCalls = toolCall['functionCalls'] as List<dynamic>? ?? [];
+
+        final responses = <Map<String, dynamic>>[];
+
+        for (final call in functionCalls) {
+          final callMap = call as Map<String, dynamic>;
+          final id = callMap['id'] as String? ?? '';
+          final name = callMap['name'] as String? ?? '';
+          final args = callMap['args'] as Map<String, dynamic>? ?? {};
+
+          if (name.isNotEmpty) {
+            try {
+              onToolCall?.call(name, args);
+            } catch (e) {
+              debugPrint('[GeminiLive] Error invoking onToolCall callback: $e');
+            }
+          }
+
+          responses.add({
+            'id': id,
+            'name': name,
+            'response': {'result': 'dispatched'}
+          });
+        }
+
+        if (responses.isNotEmpty && _channel != null) {
+          final responseMsg = {
+            'tool_response': {
+              'function_responses': responses
+            }
+          };
+          try {
+            _channel!.sink.add(jsonEncode(responseMsg));
+            debugPrint('[GeminiLive] Sent toolResponse: ${jsonEncode(responseMsg)}');
+          } catch (e) {
+            debugPrint('[GeminiLive] Error sending tool response: $e');
+          }
+        }
       }
     } catch (e) {
       debugPrint('[GeminiLive] Parse error: $e | raw: $rawData');

@@ -340,6 +340,41 @@ class RecommendationsNotifier extends StateNotifier<List<Recommendation>> {
     state = recs;
     _saveToHive();
   }
+
+  void addOrSurfaceRecommendation(String id, String aiReason) {
+    final existingIndex = state.indexWhere((r) => r.id == id);
+    final List<Recommendation> list = List.from(state);
+    if (existingIndex != -1) {
+      final existing = list[existingIndex];
+      list[existingIndex] = existing.copyWith(
+        subtitle: aiReason,
+        priority: 0,
+        completed: false,
+      );
+    } else {
+      Recommendation? template;
+      try {
+        template = MockData.initialRecommendations.firstWhere((r) => r.id == id);
+      } catch (_) {}
+
+      final newRec = template != null
+          ? template.copyWith(subtitle: aiReason, priority: 0, completed: false)
+          : Recommendation(
+              id: id,
+              type: 'discovery_nudge',
+              title: id.replaceAll('r_', '').toUpperCase(),
+              subtitle: aiReason,
+              actionLabel: 'Explore',
+              priority: 0,
+              completed: false,
+              actionRoute: '/home',
+            );
+      list.add(newRec);
+    }
+    list.sort((a, b) => a.priority.compareTo(b.priority));
+    state = list;
+    _saveToHive();
+  }
 }
 
 final recommendationsProvider = StateNotifierProvider<RecommendationsNotifier, List<Recommendation>>((ref) {

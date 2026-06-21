@@ -33,6 +33,7 @@ class _ProactiveAIBannerState extends ConsumerState<ProactiveAIBanner> {
   bool _isLiveConnected = false;
   Timer? _typingTimer;
   int _charIndex = 0;
+  final Set<String> _boostedGoalIds = {};
 
   @override
   void initState() {
@@ -82,6 +83,7 @@ class _ProactiveAIBannerState extends ConsumerState<ProactiveAIBanner> {
     dynamic user,
     ProactiveSuggestion suggestion,
   ) async {
+    _boostedGoalIds.clear();
     final goals = ref.read(goalsProvider);
     final transactions = ref.read(transactionsProvider);
     final recommendations = ref.read(recommendationsProvider);
@@ -101,11 +103,16 @@ Instructions:
 - Be warm, human, and concise (≤ 2 sentences, no lists).
 - Prioritize what the user MUST do or would benefit from most right now.
 - End with a soft call-to-action like "Tap below to ..." or "Want me to help with ...?"
+- IMPORTANT: You have access to tools that can make actual changes to the app state. When greeting the user, if you notice they need something or if you make a recommendation, you MUST call the relevant tool (e.g. `surface_recommendation`, `log_spending_insight`, `boost_goal_savings`, or `suggest_service_activation`) parallel to your greeting. Do NOT just output text, execute the tool corresponding to your advice!
 ''';
 
     _liveService = GeminiLiveService(
       apiKey: apiKey,
       systemPrompt: systemPrompt,
+      onToolCall: (name, args) {
+        if (!mounted) return;
+        _dispatchToolCall(name, args);
+      },
     );
 
     try {
@@ -149,6 +156,78 @@ Instructions:
     } catch (e) {
       debugPrint('[ProactiveAI] Gemini Live failed: $e. Using typewriter fallback.');
       _startTypewriterEffect(suggestion.message);
+    }
+  }
+
+  void _dispatchToolCall(String name, Map<String, dynamic> args) {
+    debugPrint('[ProactiveAI] Dispatched tool: $name with args: $args');
+    switch (name) {
+      case 'surface_recommendation':
+        final id = args['id'] as String? ?? '';
+        final reason = args['reason'] as String? ?? '';
+        if (id.isNotEmpty && reason.isNotEmpty) {
+          ref.read(recommendationsProvider.notifier).addOrSurfaceRecommendation(id, reason);
+        }
+        break;
+
+      case 'log_spending_insight':
+        final category = args['category'] as String? ?? '';
+        final insight = args['insight'] as String? ?? '';
+        final reason = args['reason'] as String? ?? '';
+        if (category.isNotEmpty && insight.isNotEmpty) {
+          ref.read(engagementProvider.notifier).trackEvent(
+            'AI Insight: $category',
+            coins: 0,
+            details: '$insight | Reason: $reason',
+          );
+        }
+        break;
+
+      case 'boost_goal_savings':
+        final goalId = args['goal_id'] as String? ?? '';
+        final amountValue = args['amount'] as num? ?? 0.0;
+        final amount = amountValue.toDouble();
+        final reason = args['reason'] as String? ?? '';
+        if (goalId.isNotEmpty) {
+          if (_boostedGoalIds.contains(goalId)) {
+            debugPrint('[ProactiveAI] boost_goal_savings for $goalId already executed in this session.');
+            return;
+          }
+          final goals = ref.read(goalsProvider);
+          final goalExists = goals.any((g) => g.id == goalId);
+          if (!goalExists) {
+            debugPrint('[ProactiveAI] boost_goal_savings failed: Goal $goalId does not exist.');
+            return;
+          }
+          _boostedGoalIds.add(goalId);
+          final clampedAmount = amount.clamp(0.0, 500.0);
+          final user = ref.read(userProfileProvider);
+          
+          ref.read(userProfileProvider.notifier).updateBalance(user.balance - clampedAmount);
+          ref.read(goalsProvider.notifier).saveToGoal(goalId, clampedAmount);
+          ref.read(engagementProvider.notifier).trackEvent(
+            'AI Goal Boost: $goalId',
+            coins: 10,
+            details: '$reason (Boosted: ₹$clampedAmount)',
+          );
+        }
+        break;
+
+      case 'suggest_service_activation':
+        final serviceId = args['service_id'] as String? ?? '';
+        final reason = args['reason'] as String? ?? '';
+        if (serviceId.isNotEmpty) {
+          ref.read(servicesProvider.notifier).activateService(serviceId);
+          ref.read(engagementProvider.notifier).trackEvent(
+            'AI Activated: $serviceId',
+            coins: 20,
+            details: reason,
+          );
+        }
+        break;
+        
+      default:
+        debugPrint('[ProactiveAI] Unknown tool call name: $name');
     }
   }
 
