@@ -6,8 +6,10 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/gradient_scaffold.dart';
 import '../../../core/widgets/sooubh_card.dart';
 import '../../../core/widgets/primary_button.dart';
+import '../../../data/models/user_profile.dart';
 import '../../../data/repositories/state_providers.dart';
 import '../../ai/presentation/ai_dev_config_modal.dart';
+import '../../ai/presentation/proactive_ai_widget.dart';
 import '../../navigation/state/bottom_nav_state.dart';
 
 enum OnboardingStep {
@@ -79,41 +81,44 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
     });
     _scannerController.repeat(reverse: true);
 
-    // Simulate OCR finish after 2 seconds
-    Timer(const Duration(milliseconds: 2200), () {
-      if (!mounted) return;
-      _scannerController.stop();
-      setState(() {
-        _isScanning = false;
-        if (cardType == 'PAN') {
-          _panScanned = true;
-          _nameController.text = 'Sourabh Sharma';
-          _idNumberController.text = 'ABCPD1234F';
-          _dobController.text = '12/04/1995';
-        } else {
-          _aadhaarScanned = true;
-          if (_nameController.text.isEmpty) {
+    final apiKey = ref.read(geminiApiKeyProvider);
+    if (apiKey.isEmpty) {
+      // Simulate OCR finish after 2 seconds
+      Timer(const Duration(milliseconds: 2200), () {
+        if (!mounted) return;
+        _scannerController.stop();
+        setState(() {
+          _isScanning = false;
+          if (cardType == 'PAN') {
+            _panScanned = true;
             _nameController.text = 'Sourabh Sharma';
+            _idNumberController.text = 'ABCPD1234F';
+            _dobController.text = '12/04/1995';
+          } else {
+            _aadhaarScanned = true;
+            if (_nameController.text.isEmpty) {
+              _nameController.text = 'Sourabh Sharma';
+            }
+            _idNumberController.text = '8842 1290 8371';
+            _dobController.text = '12/04/1995';
           }
-          _idNumberController.text = '8842 1290 8371';
-          _dobController.text = '12/04/1995';
-        }
-      });
-      
-      ref.read(engagementProvider.notifier).trackEvent(
-        'Simulated OCR Scan ($cardType)',
-        coins: 25,
-        details: 'Scanned mock $cardType card and auto-filled data parameters via OCR engine.',
-      );
+        });
+        
+        ref.read(engagementProvider.notifier).trackEvent(
+          'Simulated OCR Scan ($cardType)',
+          coins: 25,
+          details: 'Scanned mock $cardType card and auto-filled data parameters via OCR engine.',
+        );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('🎉 $cardType scanned successfully! Details pre-filled.'),
-          backgroundColor: AppTheme.success,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🎉 $cardType scanned successfully! Details pre-filled.'),
+            backgroundColor: AppTheme.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      });
+    }
   }
 
   void _submitOcrDetails() {
@@ -140,25 +145,28 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
       _isKycCalling = true;
     });
 
-    Timer(const Duration(seconds: 2), () {
-      if (!mounted) return;
-      setState(() {
-        _isKycCalling = false;
-        _kycVerified = true;
+    final apiKey = ref.read(geminiApiKeyProvider);
+    if (apiKey.isEmpty) {
+      Timer(const Duration(seconds: 2), () {
+        if (!mounted) return;
+        setState(() {
+          _isKycCalling = false;
+          _kycVerified = true;
+        });
+        ref.read(engagementProvider.notifier).trackEvent(
+          'Completed Video KYC',
+          coins: 30,
+          details: 'Verified identity via agentic video KYC portal.',
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('KYC Verified successfully!'),
+            backgroundColor: AppTheme.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       });
-      ref.read(engagementProvider.notifier).trackEvent(
-        'Completed Video KYC',
-        coins: 30,
-        details: 'Verified identity via agentic video KYC portal.',
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('KYC Verified successfully!'),
-          backgroundColor: AppTheme.success,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    });
+    }
   }
 
   void _skipVideoKyc() {
@@ -173,19 +181,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
       _isLinkingUpi = true;
     });
 
-    Timer(const Duration(milliseconds: 1800), () {
-      if (!mounted) return;
-      ref.read(userProfileProvider.notifier).enableUpi();
-      setState(() {
-        _isLinkingUpi = false;
-        _currentStep = OnboardingStep.success;
+    final apiKey = ref.read(geminiApiKeyProvider);
+    if (apiKey.isEmpty) {
+      Timer(const Duration(milliseconds: 1800), () {
+        if (!mounted) return;
+        ref.read(userProfileProvider.notifier).enableUpi();
+        setState(() {
+          _isLinkingUpi = false;
+          _currentStep = OnboardingStep.success;
+        });
+        ref.read(engagementProvider.notifier).trackEvent(
+          'UPI Activated during Onboarding',
+          coins: 40,
+          details: 'Enabled unified payment interface and registered primary banking VPA',
+        );
       });
-      ref.read(engagementProvider.notifier).trackEvent(
-        'UPI Activated during Onboarding',
-        coins: 40,
-        details: 'Enabled unified payment interface and registered primary banking VPA',
-      );
-    });
+    }
   }
 
   void _skipUpi() {
@@ -203,6 +214,103 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final user = ref.watch(userProfileProvider);
+
+    ref.listen<KycStepState?>(agentKycProvider, (previous, next) {
+      if (next == null) return;
+      if (next.step == 'pan' && next.userConfirmed) {
+        _scannerController.stop();
+        setState(() {
+          _isScanning = false;
+          _panScanned = true;
+          _nameController.text = 'Sourabh Sharma';
+          _idNumberController.text = 'ABCPD1234F';
+          _dobController.text = '12/04/1995';
+        });
+        ref.read(engagementProvider.notifier).trackEvent(
+          'Simulated OCR Scan (PAN)',
+          coins: 25,
+          details: 'Scanned mock PAN card and auto-filled data parameters via OCR engine.',
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎉 PAN scanned successfully! Details pre-filled.'),
+            backgroundColor: AppTheme.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } else if (next.step == 'aadhaar' && next.userConfirmed) {
+        _scannerController.stop();
+        setState(() {
+          _isScanning = false;
+          _aadhaarScanned = true;
+          if (_nameController.text.isEmpty) {
+            _nameController.text = 'Sourabh Sharma';
+          }
+          _idNumberController.text = '8842 1290 8371';
+          _dobController.text = '12/04/1995';
+        });
+        ref.read(engagementProvider.notifier).trackEvent(
+          'Simulated OCR Scan (Aadhaar)',
+          coins: 25,
+          details: 'Scanned mock Aadhaar card and auto-filled data parameters via OCR engine.',
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎉 Aadhaar scanned successfully! Details pre-filled.'),
+            backgroundColor: AppTheme.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        if (_panScanned) {
+          Timer(const Duration(milliseconds: 1000), () {
+            if (!mounted) return;
+            _submitOcrDetails();
+          });
+        }
+      } else if (next.step == 'video' && next.userConfirmed) {
+        if (_currentStep != OnboardingStep.videoKyc) {
+          setState(() {
+            _currentStep = OnboardingStep.videoKyc;
+          });
+        }
+        setState(() {
+          _isKycCalling = true;
+        });
+        Timer(const Duration(milliseconds: 1000), () {
+          if (!mounted) return;
+          setState(() {
+            _isKycCalling = false;
+            _kycVerified = true;
+          });
+          ref.read(engagementProvider.notifier).trackEvent(
+            'Completed Video KYC',
+            coins: 30,
+            details: 'Verified identity via agentic video KYC portal.',
+          );
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('KYC Verified successfully!'),
+              backgroundColor: AppTheme.success,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          Timer(const Duration(milliseconds: 1000), () {
+            if (!mounted) return;
+            setState(() {
+              _currentStep = OnboardingStep.upiSetup;
+            });
+          });
+        });
+      }
+    });
+
+    ref.listen<UserProfile>(userProfileProvider, (previous, next) {
+      if (next.upiEnabled && _currentStep == OnboardingStep.upiSetup) {
+        setState(() {
+          _currentStep = OnboardingStep.success;
+        });
+      }
+    });
 
     // If user loading presets sets newUser to false, we can trigger re-route directly
     if (!user.newUser && _currentStep != OnboardingStep.success) {
@@ -298,6 +406,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> with Ticker
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Column(
                   children: [
+                    const ProactiveAIBanner(),
+                    const SizedBox(height: 16),
                     _buildStepContent(),
                   ],
                 ),

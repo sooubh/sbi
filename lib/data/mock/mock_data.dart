@@ -183,11 +183,21 @@ class MockData {
   ];
 
   static final List<TransactionModel> initialTransactions = [
+    // May 2026 (Historical Baseline)
+    const TransactionModel(id: 'tx_hist_1', merchant: 'SBI Monthly Salary Credit', category: 'Salary', amount: 50000.0, date: 'May 01, 2026'),
+    const TransactionModel(id: 'tx_hist_2', merchant: 'Axis Bluechip SIP Mutual Fund', category: 'Investment', amount: -5000.0, date: 'May 05, 2026'),
+    const TransactionModel(id: 'tx_hist_3', merchant: 'Electricity Utility Bill', category: 'Bills', amount: -1200.0, date: 'May 10, 2026'),
+    const TransactionModel(id: 'tx_hist_4', merchant: 'Swiggy Food delivery', category: 'Food', amount: -200.0, date: 'May 12, 2026'),
+    const TransactionModel(id: 'tx_hist_5', merchant: 'Uber Ride City ride', category: 'Travel', amount: -300.0, date: 'May 15, 2026'),
+    const TransactionModel(id: 'tx_hist_6', merchant: 'Zomato Food Delivery', category: 'Food', amount: -300.0, date: 'May 20, 2026'),
+
+    // June 2026 (Current Period - Reference date June 22, 2026)
     const TransactionModel(id: 'tx001', merchant: 'Swiggy Food delivery', category: 'Food', amount: -240.0, date: 'June 17, 2026'),
-    const TransactionModel(id: 'tx002', merchant: 'SBI Monthly Salary Credit', category: 'Salary', amount: 50000.0, date: 'June 01, 2026'),
+    const TransactionModel(id: 'tx002', merchant: 'SBI Monthly Salary Credit', category: 'Salary', amount: 50000.0, date: 'June 20, 2026'), // salary received 2 days ago
     const TransactionModel(id: 'tx003', merchant: 'Electricity Utility Bill', category: 'Bills', amount: -1250.0, date: 'June 15, 2026'),
     const TransactionModel(id: 'tx004', merchant: 'Uber Ride City ride', category: 'Travel', amount: -450.0, date: 'June 16, 2026'),
-    const TransactionModel(id: 'tx005', merchant: 'Sooubh Auto-Save Nudge', category: 'Savings', amount: -50.0, date: 'June 17, 2026'),
+    const TransactionModel(id: 'tx005', merchant: 'Sooubh Auto-Save Nudge', category: 'Savings', amount: -50.0, date: 'June 19, 2026'),
+    const TransactionModel(id: 'tx006', merchant: 'Grand Feast Food Event', category: 'Food', amount: -1800.0, date: 'June 18, 2026'), // triggers spending spike in Food (> 1.5 * 500)
   ];
 
   static final List<FinancialGoal> aishaGoals = [

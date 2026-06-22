@@ -172,6 +172,73 @@ class GeminiLiveService {
                       },
                       'required': ['service_id', 'reason']
                     }
+                  },
+                  {
+                    'name': 'qualify_lead',
+                    'description': 'Qualifies a new customer by gathering their financial profile details. Call this early in the conversation.',
+                    'parameters': {
+                      'type': 'OBJECT',
+                      'properties': {
+                        'income_bracket': {
+                          'type': 'STRING',
+                          'description': 'The user\'s income bracket. Allowed values: \'low\', \'mid\', \'high\'.'
+                        },
+                        'banking_need': {
+                          'type': 'STRING',
+                          'description': 'The user\'s primary banking need (e.g., \'savings\', \'investment\', \'remittance\').'
+                        },
+                        'existing_bank': {
+                          'type': 'STRING',
+                          'description': 'The user\'s current bank name, or \'none\' if they do not have one.'
+                        }
+                      },
+                      'required': ['income_bracket', 'banking_need', 'existing_bank']
+                    }
+                  },
+                  {
+                    'name': 'initiate_kyc_step',
+                    'description': 'Initiates a specific KYC onboarding step. Only call after user verbally confirms they are ready.',
+                    'parameters': {
+                      'type': 'OBJECT',
+                      'properties': {
+                        'step': {
+                          'type': 'STRING',
+                          'description': 'The KYC step to initiate. Allowed values: \'pan\', \'aadhaar\', \'video\'.'
+                        },
+                        'user_confirmed': {
+                          'type': 'BOOLEAN',
+                          'description': 'Must be true. Indicates verbal consent to proceed.'
+                        }
+                      },
+                      'required': ['step', 'user_confirmed']
+                    }
+                  },
+                  {
+                    'name': 'activate_upi',
+                    'description': 'Activates the UPI payments service for the user once their KYC steps are completed.',
+                    'parameters': {
+                      'type': 'OBJECT',
+                      'properties': {},
+                      "required": []
+                    }
+                  },
+                  {
+                    'name': 'suggest_first_action',
+                    'description': 'Suggests the best first financial action/recommendation for the user based on lead qualification.',
+                    'parameters': {
+                      'type': 'OBJECT',
+                      'properties': {
+                        'recommendation_id': {
+                          'type': 'STRING',
+                          'description': 'The recommendation ID to surface. Must match one of: \'r_goal\', \'r_fd\'.'
+                        },
+                        'reason': {
+                          'type': 'STRING',
+                          'description': 'A personalized reason explaining why this action is recommended.'
+                        }
+                      },
+                      'required': ['recommendation_id', 'reason']
+                    }
                   }
                 ]
               }

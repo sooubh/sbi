@@ -88,22 +88,37 @@ class _ProactiveAIBannerState extends ConsumerState<ProactiveAIBanner> {
     final transactions = ref.read(transactionsProvider);
     final recommendations = ref.read(recommendationsProvider);
     final services = ref.read(servicesProvider);
+    final signals = ref.read(financialSignalsProvider);
 
     final systemPrompt = '''
 You are Sooubh AI, the proactive banking assistant for YONO SBI.
 You auto-greet the user with one actionable, personalized message (max 2 sentences) when they open the app.
 You MUST reference their real account data.
 
-User: ${user.name} | Balance: ₹${user.balance.toStringAsFixed(2)} | KYC: ${user.kycComplete} | UPI: ${user.upiEnabled} | Goals: ${goals.length} | Health Score: ${user.financialHealthScore}/100
+User: ${user.name} | Balance: ₹${user.balance.toStringAsFixed(2)} | KYC: ${user.kycComplete} | UPI: ${user.upiEnabled} | Goals: ${goals.length} | Health Score: ${user.financialHealthScore}/100 | Onboarding: ${user.newUser ? 'New User (needs Onboarding)' : 'Existing User'}
 Pending Recs: ${recommendations.where((r) => !r.completed).map((r) => r.title).join(', ')}
 Recent Transactions: ${transactions.take(2).map((t) => '${t.merchant} ₹${t.amount}').join(', ')}
 Active Services: ${services.where((s) => s.isActivated).map((s) => s.name).join(', ')}
+
+Financial Patterns & Signals:
+${signals.summaryForAgent}
+
+Onboarding Context:
+If user is a New User (Onboarding):
+- You are speaking to a new/prospective customer of SBI.
+- Greet them warmly and call `qualify_lead` early (1-2 replies) to understand their profile.
+- Guide them step-by-step: first KYC (PAN & Aadhaar scan, then Video KYC), then UPI activation.
+- Call `initiate_kyc_step` (with step: 'pan', 'aadhaar', or 'video') ONLY after the user verbally confirms they are ready.
+- Once both KYC scanning and Video KYC are done, call `activate_upi`.
+- After UPI is activated, call `suggest_first_action` to recommend a first action ('r_goal' or 'r_fd') based on lead details.
+- Keep the conversation extremely natural, warm, and in Hinglish (Hindi-English mix).
+- You must always include the 'reason' or other arguments required by the tools.
 
 Instructions:
 - Be warm, human, and concise (≤ 2 sentences, no lists).
 - Prioritize what the user MUST do or would benefit from most right now.
 - End with a soft call-to-action like "Tap below to ..." or "Want me to help with ...?"
-- IMPORTANT: You have access to tools that can make actual changes to the app state. When greeting the user, if you notice they need something or if you make a recommendation, you MUST call the relevant tool (e.g. `surface_recommendation`, `log_spending_insight`, `boost_goal_savings`, or `suggest_service_activation`) parallel to your greeting. Do NOT just output text, execute the tool corresponding to your advice!
+- IMPORTANT: You have access to tools that can make actual changes to the app state. When greeting or conversing, if you notice the user needs something, or if you make a recommendation, you MUST call the relevant tool (e.g. `qualify_lead`, `initiate_kyc_step`, `activate_upi`, `suggest_first_action`, `surface_recommendation`, `log_spending_insight`, `boost_goal_savings`, or `suggest_service_activation`) parallel to your response. Do NOT just output text, execute the tool corresponding to your advice!
 ''';
 
     _liveService = GeminiLiveService(
@@ -225,7 +240,61 @@ Instructions:
           );
         }
         break;
-        
+
+      case 'qualify_lead':
+        final incomeBracket = args['income_bracket'] as String? ?? '';
+        final bankingNeed = args['banking_need'] as String? ?? '';
+        final existingBank = args['existing_bank'] as String? ?? '';
+        if (incomeBracket.isNotEmpty && bankingNeed.isNotEmpty && existingBank.isNotEmpty) {
+          ref.read(userProfileProvider.notifier).qualifyLead(
+            incomeBracket: incomeBracket,
+            bankingNeed: bankingNeed,
+            existingBank: existingBank,
+          );
+        }
+        break;
+
+      case 'initiate_kyc_step':
+        final step = args['step'] as String? ?? '';
+        final userConfirmed = args['user_confirmed'] as bool? ?? false;
+        if (step.isNotEmpty && userConfirmed) {
+          final user = ref.read(userProfileProvider);
+          if (!user.kycComplete && ModalRoute.of(context)?.settings.name != '/onboarding/kyc') {
+            Navigator.of(context).pushNamed('/onboarding/kyc');
+          }
+          ref.read(agentKycProvider.notifier).triggerKycStep(step, userConfirmed);
+        }
+        break;
+
+      case 'activate_upi':
+        if (ref.read(upiActivatedSessionProvider)) {
+          debugPrint('[ProactiveAI] activate_upi already executed in this session.');
+          return;
+        }
+        ref.read(upiActivatedSessionProvider.notifier).state = true;
+        ref.read(userProfileProvider.notifier).enableUpi();
+        ref.read(servicesProvider.notifier).activateService('upi');
+        ref.read(engagementProvider.notifier).trackEvent(
+          'UPI Activated during Onboarding',
+          coins: 40,
+          details: 'Enabled unified payment interface and registered primary banking VPA',
+        );
+        ref.read(recommendationsProvider.notifier).completeRecommendation('r_upi');
+        break;
+
+      case 'suggest_first_action':
+        final recommendationId = args['recommendation_id'] as String? ?? '';
+        final reason = args['reason'] as String? ?? '';
+        if (recommendationId.isNotEmpty && reason.isNotEmpty) {
+          if (ref.read(suggestFirstActionSessionProvider)) {
+            debugPrint('[ProactiveAI] suggest_first_action already executed in this session.');
+            return;
+          }
+          ref.read(suggestFirstActionSessionProvider.notifier).state = true;
+          ref.read(recommendationsProvider.notifier).addOrSurfaceRecommendation(recommendationId, reason);
+        }
+        break;
+
       default:
         debugPrint('[ProactiveAI] Unknown tool call name: $name');
     }
